@@ -36,6 +36,11 @@ const BRAND_COLORS: Record<string, string> = {
   clickhouse: '#FFCC01',
   cassandra: '#1287B1',
   neo4j: '#018BFF',
+  cloudflare: '#F38020',
+  cloudflareworkers: '#F38020',
+  dnsresolver: '#00d4ff',
+  awsroute53: '#FF9900',
+  servers: '#22c55e',
 };
 
 // SVG brand mark renderers
@@ -324,6 +329,49 @@ const BRAND_SVGS: Record<string, (size: number, color: string) => React.ReactEle
       <circle cx="22" cy="10" r="4.5" fill={color} opacity="0.4"/>
       <line x1="10" y1="10" x2="22" y2="22" stroke={color} strokeWidth="2"/>
       <line x1="10" y1="10" x2="22" y2="10" stroke={color} strokeWidth="2" opacity="0.5"/>
+    </svg>
+  ),
+  cloudflare: (size, color) => (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      {/* Cloudflare cloud shape */}
+      <path d="M22 21H9.5C7.57 21 6 19.43 6 17.5C6 15.74 7.3 14.28 9 14.04C9 14.03 9 14.01 9 14C9 11.24 11.24 9 14 9C15.97 9 17.68 10.08 18.58 11.67C19.05 11.39 19.6 11.25 20.17 11.25C21.73 11.25 23 12.52 23 14.08C23 14.13 23 14.18 22.99 14.23C24.17 14.65 25 15.77 25 17.08C25 19.24 23.21 21 22 21Z" fill={color} opacity="0.9"/>
+      <path d="M20 21H27.5C28.33 21 29 20.33 29 19.5C29 18.67 28.33 18 27.5 18C27.5 18 27.5 18 27.5 18C27.5 16.34 26.16 15 24.5 15C23.94 15 23.42 15.17 22.99 15.45C22.99 14.98 23 14.53 23 14.08" fill={color} opacity="0.5"/>
+    </svg>
+  ),
+  cloudflareworkers: (size, color) => (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <path d="M20 6L12 16L16 16L12 26L24 14L18 14Z" fill={color} opacity="0.9"/>
+      <path d="M8 10L6 16L10 16L8 22" stroke={color} strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.5"/>
+    </svg>
+  ),
+  dnsresolver: (size, color) => (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="10" stroke={color} strokeWidth="1.5" fill="none"/>
+      <path d="M16 6 Q20 16 16 26" stroke={color} strokeWidth="1.5" fill="none"/>
+      <path d="M16 6 Q12 16 16 26" stroke={color} strokeWidth="1.5" fill="none"/>
+      <path d="M6 16 h20" stroke={color} strokeWidth="1.5"/>
+      <text x="10" y="20" fontSize="5" fontWeight="900" fill={color} fontFamily="monospace">DNS</text>
+    </svg>
+  ),
+  awsroute53: (size, color) => (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="10" stroke={color} strokeWidth="1.5" fill={color} fillOpacity="0.1"/>
+      <path d="M16 8 Q22 12 22 16 Q22 20 16 24 Q10 20 10 16 Q10 12 16 8Z" stroke={color} strokeWidth="1.5" fill="none"/>
+      <path d="M8 16 h16" stroke={color} strokeWidth="1.5"/>
+      <text x="10" y="20" fontSize="5" fontWeight="900" fill={color} fontFamily="monospace">R53</text>
+    </svg>
+  ),
+  servers: (size, color) => (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      {/* Server rack */}
+      <rect x="5" y="6" width="22" height="6" rx="1.5" fill={color} opacity="0.2" stroke={color} strokeWidth="1.5"/>
+      <rect x="5" y="14" width="22" height="6" rx="1.5" fill={color} opacity="0.2" stroke={color} strokeWidth="1.5"/>
+      <rect x="5" y="22" width="22" height="5" rx="1.5" fill={color} opacity="0.2" stroke={color} strokeWidth="1.5"/>
+      <circle cx="23" cy="9" r="1" fill={color}/>
+      <circle cx="23" cy="17" r="1" fill={color}/>
+      <circle cx="23" cy="24.5" r="1" fill={color}/>
+      <rect x="8" y="8" width="10" height="2" rx="1" fill={color} opacity="0.5"/>
+      <rect x="8" y="16" width="10" height="2" rx="1" fill={color} opacity="0.5"/>
     </svg>
   ),
 };

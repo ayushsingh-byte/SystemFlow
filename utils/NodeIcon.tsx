@@ -51,9 +51,22 @@ const SI: Record<string, { brand: string; hex: string; light?: boolean }> = {
   's3-storage':    { brand: 'aws',           hex: 'FF9900' },
   'data-warehouse':{ brand: 'snowflake',     hex: '29B5E8' },
   // Network
-  'reverse-proxy': { brand: 'nginx',         hex: '009639' },
-  'web-server':    { brand: 'nginx',         hex: '009639' },
-  'ingress':       { brand: 'kubernetes',    hex: '326CE5' },
+  'reverse-proxy':      { brand: 'nginx',             hex: '009639' },
+  'web-server':         { brand: 'nginx',             hex: '009639' },
+  'ingress':            { brand: 'kubernetes',        hex: '326CE5' },
+  'cloudflare':         { brand: 'cloudflare',        hex: 'F38020' },
+  'cloudflare-workers': { brand: 'cloudflareworkers', hex: 'F38020' },
+  'route53':            { brand: 'awsroute53',        hex: 'FF9900' },
+  'dns-resolver':       { brand: 'dnsresolver',       hex: '00d4ff' },
+  // Servers
+  'nginx-server':       { brand: 'nginx',             hex: '009639' },
+  'web-server-apache':  { brand: 'servers',           hex: '22c55e' },
+  'app-server':         { brand: 'servers',           hex: '22c55e' },
+  'file-server':        { brand: 'servers',           hex: '22c55e' },
+  'mail-server':        { brand: 'servers',           hex: '22c55e' },
+  'game-server':        { brand: 'servers',           hex: '22c55e' },
+  'media-server':       { brand: 'servers',           hex: '22c55e' },
+  'proxy-server':       { brand: 'servers',           hex: '22c55e' },
 };
 
 // ─── Custom SVG icons for generic concepts ───────────────────────────────────

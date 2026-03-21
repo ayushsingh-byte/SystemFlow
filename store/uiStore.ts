@@ -6,7 +6,7 @@ interface UIState {
   leftPanelOpen: boolean;
   rightPanelOpen: boolean;
   bottomPanelOpen: boolean;
-  ribbonTab: 'simulate' | 'traffic' | 'profiles' | 'chaos';
+  ribbonTab: 'simulate' | 'traffic' | 'profiles' | 'chaos' | 'testlab';
   toggleTheme: () => void;
   toggleLeftPanel: () => void;
   toggleRightPanel: () => void;
@@ -22,7 +22,7 @@ export const useUIStore = create<UIState>()(
       rightPanelOpen: true,
       bottomPanelOpen: true,
       ribbonTab: 'simulate',
-      toggleTheme: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
+      toggleTheme: () => { /* Theme switching disabled */ },
       toggleLeftPanel: () => set((s) => ({ leftPanelOpen: !s.leftPanelOpen })),
       toggleRightPanel: () => set((s) => ({ rightPanelOpen: !s.rightPanelOpen })),
       toggleBottomPanel: () => set((s) => ({ bottomPanelOpen: !s.bottomPanelOpen })),

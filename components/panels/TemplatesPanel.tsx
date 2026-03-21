@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
+import { useAuthStore } from '@/store/authStore';
 import { TEMPLATE_INFO, TemplateInfo } from '@/store/presets';
 import type { AdvancedPresetId } from '@/store/presets';
 import { BrandIcon } from '@/utils/BrandIcons';
@@ -45,9 +46,11 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export default function TemplatesPanel() {
   const { loadPreset, simConfig } = useStore();
+  const { isPremium } = useAuthStore();
   const [selected, setSelected] = useState<TemplateInfo | null>(null);
   const [loaded, setLoaded] = useState<string | null>(null);
   const [filter, setFilter] = useState<string>('All');
+  const [premiumPrompt, setPremiumPrompt] = useState<string | null>(null);
 
   const categories = ['All', ...Array.from(new Set(TEMPLATE_INFO.map(t => t.category)))];
 
@@ -57,6 +60,10 @@ export default function TemplatesPanel() {
 
   const handleLoad = (tpl: TemplateInfo) => {
     if (simConfig.running) return;
+    if (tpl.premium && !isPremium) {
+      setPremiumPrompt(tpl.id);
+      return;
+    }
     loadPreset(tpl.id as AdvancedPresetId);
     setLoaded(tpl.id);
     setTimeout(() => setLoaded(null), 2000);
@@ -115,6 +122,7 @@ export default function TemplatesPanel() {
           const color = CATEGORY_COLORS[tpl.category] ?? '#8fa3b8';
           const isSelected = selected?.id === tpl.id;
           const isLoaded = loaded === tpl.id;
+          const isLocked = tpl.premium && !isPremium;
 
           return (
             <div key={tpl.id}>
@@ -143,8 +151,24 @@ export default function TemplatesPanel() {
                     <div style={{
                       fontSize: 13, fontWeight: 700, color: '#e2eaf4',
                       fontFamily: 'monospace', marginBottom: 2,
+                      display: 'flex', alignItems: 'center', gap: 6,
                     }}>
                       {tpl.name}
+                      {tpl.premium && (
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 3,
+                          background: isLocked ? '#f59e0b18' : '#10b98118',
+                          border: `1px solid ${isLocked ? '#f59e0b40' : '#10b98140'}`,
+                          borderRadius: 4, padding: '1px 6px',
+                        }}>
+                          <svg width="9" height="9" viewBox="0 0 24 24" fill={isLocked ? '#f59e0b' : '#10b981'}>
+                            <path d="M2 20h20v-4H2v4zm2-14l5 5 3-6 3 6 5-5-2 10H4L2 6z"/>
+                          </svg>
+                          <span style={{ fontSize: 9, color: isLocked ? '#f59e0b' : '#10b981', fontFamily: 'monospace', fontWeight: 800 }}>
+                            PRO
+                          </span>
+                        </span>
+                      )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{
@@ -163,7 +187,12 @@ export default function TemplatesPanel() {
                     fontSize: 11, color: isSelected ? color : '#374151',
                     transition: 'color 0.15s', flexShrink: 0,
                   }}>
-                    {isSelected ? '▲' : '▼'}
+                    {isLocked ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="11" width="18" height="11" rx="2" stroke="#f59e0b" strokeWidth="1.5"/>
+                        <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round"/>
+                      </svg>
+                    ) : (isSelected ? '▲' : '▼')}
                   </div>
                 </div>
 
@@ -262,9 +291,10 @@ export default function TemplatesPanel() {
                         disabled={simConfig.running}
                         style={{
                           width: '100%', height: 38,
-                          background: isLoaded ? '#10b98120' : `${color}18`,
-                          border: `1px solid ${isLoaded ? '#10b981' : color}`,
-                          borderRadius: 8, color: isLoaded ? '#10b981' : color,
+                          background: isLoaded ? '#10b98120' : isLocked ? '#f59e0b15' : `${color}18`,
+                          border: `1px solid ${isLoaded ? '#10b981' : isLocked ? '#f59e0b50' : color}`,
+                          borderRadius: 8,
+                          color: isLoaded ? '#10b981' : isLocked ? '#f59e0b' : color,
                           fontSize: 12, fontFamily: 'monospace', fontWeight: 700,
                           cursor: simConfig.running ? 'not-allowed' : 'pointer',
                           transition: 'all 0.15s',
@@ -272,7 +302,15 @@ export default function TemplatesPanel() {
                           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
                         }}
                       >
-                        {isLoaded ? '+ Loaded!' : simConfig.running ? '|| Stop sim first' : `> Load ${tpl.name}`}
+                        {isLoaded ? '+ Loaded!' : simConfig.running ? '|| Stop sim first' : isLocked ? (
+                          <>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                              <rect x="3" y="11" width="18" height="11" rx="2" stroke="#f59e0b" strokeWidth="2"/>
+                              <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"/>
+                            </svg>
+                            Premium Required — Activate to Load
+                          </>
+                        ) : `> Load ${tpl.name}`}
                       </button>
                     </div>
                   </motion.div>

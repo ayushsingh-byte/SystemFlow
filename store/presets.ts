@@ -50,6 +50,7 @@ export interface TemplateInfo {
   bottlenecks: string[];
   scalingNotes: string;
   category: string;
+  premium?: boolean;
 }
 
 export const TEMPLATE_INFO: TemplateInfo[] = [
@@ -100,13 +101,14 @@ export const TEMPLATE_INFO: TemplateInfo[] = [
   {
     id: 'fintech',
     name: 'Fintech / Banking System',
-    description: 'Strong-consistency financial system with MFA auth, fraud detection, risk engine, geo-distributed DB, full audit trail, and compliance reporting.',
+    description: 'Strong-consistency financial system with MFA auth, fraud detection ML, risk engine, geo-distributed CockroachDB, full audit trail, compliance reporting, and regulatory data pipeline.',
     icon: '🏦',
     category: 'Finance',
-    nodeCount: 22,
-    tags: ['strong-consistency', 'audit', 'fraud-detection', 'mfa', 'compliance'],
-    bottlenecks: ['Transaction Service', 'Primary DB', 'Fraud Detection'],
+    nodeCount: 28,
+    tags: ['strong-consistency', 'audit', 'fraud-detection', 'mfa', 'compliance', 'geo-distributed'],
+    bottlenecks: ['Transaction Service', 'Primary DB', 'Fraud Detection ML'],
     scalingNotes: 'Use CockroachDB for geo-distributed consistency. Cache fraud model features in Redis. Async compliance checks via Kafka.',
+    premium: true,
   },
   {
     id: 'ride-sharing',
@@ -144,24 +146,26 @@ export const TEMPLATE_INFO: TemplateInfo[] = [
   {
     id: 'search-engine',
     name: 'Search Engine System',
-    description: 'Distributed search with query parsing, spell correction, ML ranking, autocomplete, crawler pipeline, click-through tracking, and analytics.',
+    description: 'Enterprise-grade distributed search with multi-tier query parsing, neural ranking (BERT), autocomplete with ML, web crawler pipeline, click-through feedback loop, A/B testing, and real-time analytics dashboard.',
     icon: '🔍',
     category: 'Data Engineering',
-    nodeCount: 22,
-    tags: ['elasticsearch', 'ranking', 'crawler', 'autocomplete', 'analytics'],
-    bottlenecks: ['Elasticsearch Cluster', 'Ranking Engine', 'Index Updater'],
+    nodeCount: 30,
+    tags: ['elasticsearch', 'neural-ranking', 'crawler', 'autocomplete', 'analytics', 'ab-testing'],
+    bottlenecks: ['Elasticsearch Cluster', 'Neural Ranking Engine', 'Index Updater'],
     scalingNotes: 'Add Elasticsearch shards for scale. Cache hot queries in Redis. Separate read/write clusters. Run index updates in off-peak windows.',
+    premium: true,
   },
   {
     id: 'gaming-backend',
     name: 'Online Gaming Backend',
-    description: 'Ultra-low-latency gaming with WebSocket servers, matchmaking, game state synchronization, anti-cheat, leaderboards, and in-game economy service.',
+    description: 'Ultra-low-latency competitive gaming platform with dedicated game servers, real-time matchmaking with MMR, WebSocket state sync, anti-cheat ML pipeline, global leaderboards, in-game economy, and live tournament system.',
     icon: '🎮',
     category: 'Real-Time',
-    nodeCount: 22,
-    tags: ['websocket', 'matchmaking', 'gamestate', 'realtime', 'leaderboard'],
+    nodeCount: 28,
+    tags: ['websocket', 'matchmaking', 'gamestate', 'anti-cheat', 'leaderboard', 'economy'],
     bottlenecks: ['WebSocket Servers', 'Game State Cache', 'Matchmaking Service'],
     scalingNotes: 'Use dedicated game servers per match. Redis for sub-ms state reads. Async anti-cheat processing. Shard leaderboard by game mode.',
+    premium: true,
   },
 ];
 

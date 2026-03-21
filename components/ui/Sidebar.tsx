@@ -82,8 +82,8 @@ export default function Sidebar() {
 
   return (
     <div style={{
-      width: 380,
-      minWidth: 380,
+      width: 360,
+      minWidth: 360,
       background: t.surface,
       borderLeft: `1px solid ${t.border}`,
       display: 'flex',
@@ -97,8 +97,7 @@ export default function Sidebar() {
         background: t.surface2,
         borderBottom: `1px solid ${t.border}`,
         flexShrink: 0,
-        height: 52,
-        overflowX: 'auto',
+        height: 46,
       }}>
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
@@ -107,15 +106,14 @@ export default function Sidebar() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
+              title={tab.label}
               style={{
                 flex: 1,
-                background: 'transparent',
+                minWidth: 0,
+                background: isActive ? `${t.accent}12` : 'transparent',
                 border: 'none',
                 borderBottom: `2px solid ${isActive ? t.accent : 'transparent'}`,
                 color: isActive ? t.accent : t.textSecondary,
-                fontSize: 12,
-                fontFamily: 'monospace',
-                fontWeight: isActive ? 700 : 500,
                 cursor: 'pointer',
                 transition: 'all 0.15s',
                 position: 'relative',
@@ -123,8 +121,8 @@ export default function Sidebar() {
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 3,
-                padding: '0 4px',
+                gap: 2,
+                padding: '0 2px',
               }}
               onMouseEnter={(e) => {
                 if (!isActive) (e.currentTarget as HTMLElement).style.color = t.textPrimary;
@@ -133,18 +131,18 @@ export default function Sidebar() {
                 if (!isActive) (e.currentTarget as HTMLElement).style.color = t.textSecondary;
               }}
             >
-              <span style={{ fontSize: 16, lineHeight: 1 }}>{tab.icon}</span>
-              <span style={{ fontSize: 12, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              <span style={{ lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{tab.icon}</span>
+              <span style={{ fontSize: 9, letterSpacing: '0.04em', textTransform: 'uppercase', fontFamily: 'monospace', fontWeight: isActive ? 700 : 500, whiteSpace: 'nowrap', overflow: 'hidden', maxWidth: '100%', textOverflow: 'clip' }}>
                 {tab.label}
               </span>
               {badge > 0 && (
                 <span style={{
-                  position: 'absolute', top: 6, right: 10,
-                  minWidth: 16, height: 16, borderRadius: 8,
+                  position: 'absolute', top: 4, right: 4,
+                  minWidth: 14, height: 14, borderRadius: 7,
                   background: t.accent, color: t.bg,
-                  fontSize: 10, fontFamily: 'monospace', fontWeight: 800,
+                  fontSize: 9, fontFamily: 'monospace', fontWeight: 800,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  padding: '0 4px',
+                  padding: '0 3px',
                 }}>
                   {badge > 99 ? '99+' : badge}
                 </span>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import { useSimulation } from '@/hooks/useSimulation';
@@ -205,13 +205,44 @@ function HighTrafficModal({
 }
 
 // ─── Ribbon Tab Types ─────────────────────────────────────────────────────────
-type RibbonTab = 'simulate' | 'traffic' | 'profiles' | 'chaos';
+type RibbonTab = 'simulate' | 'traffic' | 'profiles' | 'chaos' | 'testlab';
 
 const RIBBON_TABS: { id: RibbonTab; label: string }[] = [
   { id: 'simulate', label: 'SIMULATE' },
   { id: 'traffic',  label: 'TRAFFIC'  },
   { id: 'profiles', label: 'PROFILES' },
   { id: 'chaos',    label: 'CHAOS'    },
+  { id: 'testlab',  label: 'TEST LAB' },
+];
+
+// ─── Test Scenarios ───────────────────────────────────────────────────────────
+interface TestScenario {
+  id: string;
+  name: string;
+  badge: string;
+  badgeColor: string;
+  description: string;
+  duration: number;
+  trafficRate: number;
+  pattern: TrafficPattern;
+  failureInjection: boolean;
+  maxErrorRate: number;
+  maxLatency: number;
+}
+
+const TEST_SCENARIOS: TestScenario[] = [
+  { id: 'smoke',      name: 'Smoke Test',      badge: 'QUICK',   badgeColor: '#10b981', description: '10s at 10 req/s — quick sanity check',                   duration: 10,  trafficRate: 10,    pattern: 'constant', failureInjection: false, maxErrorRate: 5,   maxLatency: 2000  },
+  { id: 'baseline',   name: 'Baseline',         badge: '30s',     badgeColor: '#3b82f6', description: '30s at 50 req/s — establish performance baseline',        duration: 30,  trafficRate: 50,    pattern: 'constant', failureInjection: false, maxErrorRate: 2,   maxLatency: 1000  },
+  { id: 'load',       name: 'Load Test',        badge: '60s',     badgeColor: '#3b82f6', description: '60s at 500 req/s — verify expected load capacity',        duration: 60,  trafficRate: 500,   pattern: 'constant', failureInjection: false, maxErrorRate: 5,   maxLatency: 2000  },
+  { id: 'stress',     name: 'Stress Test',      badge: 'RAMP',    badgeColor: '#f59e0b', description: '60s ramp 1→5k req/s — find system breaking point',       duration: 60,  trafficRate: 5000,  pattern: 'ramp',     failureInjection: false, maxErrorRate: 20,  maxLatency: 5000  },
+  { id: 'spike',      name: 'Spike Test',       badge: 'BURST',   badgeColor: '#f59e0b', description: '60s spike bursts — test auto-scaling & burst resilience', duration: 60,  trafficRate: 1000,  pattern: 'spike',    failureInjection: false, maxErrorRate: 10,  maxLatency: 3000  },
+  { id: 'soak',       name: 'Soak Test',        badge: '120s',    badgeColor: '#8b5cf6', description: '120s at 200 req/s — endurance & memory leak detection',   duration: 120, trafficRate: 200,   pattern: 'constant', failureInjection: false, maxErrorRate: 3,   maxLatency: 1500  },
+  { id: 'breakpoint', name: 'Breakpoint',       badge: 'STEP',    badgeColor: '#f59e0b', description: '90s step ramp — find exact failure threshold',            duration: 90,  trafficRate: 10000, pattern: 'step',     failureInjection: false, maxErrorRate: 50,  maxLatency: 10000 },
+  { id: 'chaos',      name: 'Chaos Test',       badge: 'CHAOS',   badgeColor: '#ef4444', description: '60s at 500 req/s + random failures — chaos engineering',  duration: 60,  trafficRate: 500,   pattern: 'constant', failureInjection: true,  maxErrorRate: 30,  maxLatency: 5000  },
+  { id: 'failover',   name: 'Failover Test',    badge: 'FAIL',    badgeColor: '#ef4444', description: '60s spike + chaos — verify failover & redundancy',        duration: 60,  trafficRate: 300,   pattern: 'spike',    failureInjection: true,  maxErrorRate: 25,  maxLatency: 4000  },
+  { id: 'sla',        name: 'SLA Validation',   badge: 'SLA',     badgeColor: '#10b981', description: '60s wave — validate 99.9% uptime & latency SLAs',        duration: 60,  trafficRate: 100,   pattern: 'wave',     failureInjection: false, maxErrorRate: 0.1, maxLatency: 500   },
+  { id: 'cascade',    name: 'Cascade Failure',  badge: 'EXTREME', badgeColor: '#dc2626', description: '45s max load + chaos — trigger cascade failures',         duration: 45,  trafficRate: 10000, pattern: 'spike',    failureInjection: true,  maxErrorRate: 80,  maxLatency: 15000 },
+  { id: 'recovery',   name: 'Recovery Test',    badge: 'MTTR',    badgeColor: '#8b5cf6', description: '90s ramp + chaos — measure mean time to recovery',        duration: 90,  trafficRate: 1000,  pattern: 'ramp',     failureInjection: true,  maxErrorRate: 40,  maxLatency: 8000  },
 ];
 
 // ─── ControlPanel ─────────────────────────────────────────────────────────────
@@ -232,6 +263,78 @@ export default function ControlPanel() {
   // High traffic modal state
   const [htModal, setHtModal] = useState<{ rate: number; profile: TestProfile | null } | null>(null);
   const [pendingStart, setPendingStart] = useState(false);
+
+  // Test Lab state
+  const [activeTest, setActiveTest] = useState<string | null>(null);
+  const [testProgress, setTestProgress] = useState(0);
+  const [testResults, setTestResults] = useState<Record<string, { passed: boolean; errorRate: number; latency: number; throughput: number }>>({});
+  const testTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => { if (testTimerRef.current) clearInterval(testTimerRef.current); };
+  }, []);
+
+  const stopTest = useCallback(() => {
+    if (testTimerRef.current) {
+      clearInterval(testTimerRef.current);
+      testTimerRef.current = null;
+    }
+    stopSimulation();
+    setActiveTest(null);
+    setTestProgress(0);
+  }, [stopSimulation]);
+
+  const runTest = useCallback((scenario: TestScenario) => {
+    if (testTimerRef.current) {
+      clearInterval(testTimerRef.current);
+      testTimerRef.current = null;
+    }
+
+    if (running) stopSimulation();
+    setActiveTest(scenario.id);
+    setTestProgress(0);
+    setTrafficRate(scenario.trafficRate);
+    setTrafficPattern(scenario.pattern);
+    if (scenario.failureInjection !== failureInjection) {
+      toggleFailureInjection(scenario.failureInjection);
+    }
+
+    setTimeout(() => {
+      startSimulation();
+      const startTime = Date.now();
+      const totalMs = scenario.duration * 1000;
+
+      // Progress ticker
+      testTimerRef.current = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        setTestProgress(Math.min(99, Math.round((elapsed / totalMs) * 100)));
+      }, 300);
+
+      // End timer
+      setTimeout(() => {
+        if (testTimerRef.current) {
+          clearInterval(testTimerRef.current);
+          testTimerRef.current = null;
+        }
+        stopSimulation();
+        setTestProgress(100);
+
+        const m = useStore.getState().metrics;
+        const passed = m.errorRate <= scenario.maxErrorRate && m.avgLatency <= scenario.maxLatency;
+        setTestResults(prev => ({
+          ...prev,
+          [scenario.id]: {
+            passed,
+            errorRate: parseFloat(m.errorRate.toFixed(1)),
+            latency: Math.round(m.avgLatency),
+            throughput: parseFloat(m.throughput.toFixed(1)),
+          },
+        }));
+        setActiveTest(null);
+      }, totalMs);
+    }, 150);
+  }, [running, failureInjection, stopSimulation, startSimulation, setTrafficRate, setTrafficPattern, toggleFailureInjection]);
 
   const sliderValue = rateToSlider(trafficRate);
 
@@ -319,7 +422,7 @@ export default function ControlPanel() {
         <div style={{
           display: 'flex',
           alignItems: 'center',
-          height: 28,
+          height: 34,
           borderBottom: `1px solid ${t.border}`,
           background: t.surface,
           paddingLeft: 8,
@@ -379,7 +482,7 @@ export default function ControlPanel() {
             onClick={toggleBottomPanel}
             title="Collapse toolbar"
             style={{
-              height: 28, width: 28, background: 'transparent', border: 'none',
+              height: 34, width: 32, background: 'transparent', border: 'none',
               borderLeft: `1px solid ${t.border}`,
               color: t.textMuted, cursor: 'pointer', fontSize: 10,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -394,11 +497,11 @@ export default function ControlPanel() {
 
         {/* Tab content area */}
         <div style={{
-          height: 52,
+          height: ribbonTab === 'testlab' ? 200 : 76,
           display: 'flex',
-          alignItems: 'center',
-          padding: '0 12px',
-          gap: 10,
+          alignItems: ribbonTab === 'testlab' ? 'flex-start' : 'center',
+          padding: ribbonTab === 'testlab' ? '10px 14px 8px' : '0 14px',
+          gap: 12,
           overflowX: 'auto',
           overflowY: 'hidden',
         }}>
@@ -589,6 +692,111 @@ export default function ControlPanel() {
                   </div>
                 </>
               )}
+            </>
+          )}
+
+          {/* TEST LAB tab */}
+          {ribbonTab === 'testlab' && (
+            <>
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, paddingBottom: 4, borderBottom: `1px solid ${t.border}` }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: t.textSecondary, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    12 Test Scenarios
+                    {activeTest && <span style={{ color: '#f59e0b', marginLeft: 8 }}>● Running: {TEST_SCENARIOS.find(s => s.id === activeTest)?.name}</span>}
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {Object.keys(testResults).length > 0 && (
+                      <button onClick={() => setTestResults({})} style={{ background: 'transparent', border: `1px solid ${t.border2}`, borderRadius: 4, color: t.textMuted, fontSize: 9, fontFamily: 'monospace', cursor: 'pointer', padding: '2px 8px' }}>
+                        Clear Results
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Scrollable grid */}
+                <div style={{ overflowX: 'auto', overflowY: 'hidden' }}>
+                  <div style={{ display: 'flex', gap: 5, minWidth: 'max-content' }}>
+                    {TEST_SCENARIOS.map(scenario => {
+                      const result = testResults[scenario.id];
+                      const isRunning = activeTest === scenario.id;
+                      const borderCol = result ? (result.passed ? '#10b98140' : '#ef444440') : (isRunning ? `${scenario.badgeColor}50` : t.border);
+                      return (
+                        <div key={scenario.id} style={{
+                          width: 158, flexShrink: 0,
+                          background: isRunning ? `${scenario.badgeColor}08` : result ? (result.passed ? '#10b98108' : '#ef444408') : t.surface,
+                          border: `1px solid ${borderCol}`,
+                          borderRadius: 7, padding: '8px 9px',
+                          transition: 'all 0.2s',
+                        }}>
+                          {/* Top row */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                            <span style={{
+                              padding: '1px 5px', borderRadius: 3,
+                              background: `${scenario.badgeColor}20`, border: `1px solid ${scenario.badgeColor}50`,
+                              fontSize: 8, color: scenario.badgeColor, fontFamily: 'monospace', fontWeight: 700,
+                            }}>
+                              {scenario.badge}
+                            </span>
+                            {result && (
+                              <span style={{
+                                padding: '1px 5px', borderRadius: 3, fontSize: 8, fontFamily: 'monospace', fontWeight: 800,
+                                background: result.passed ? '#10b98120' : '#ef444420',
+                                color: result.passed ? '#10b981' : '#ef4444',
+                                border: `1px solid ${result.passed ? '#10b98140' : '#ef444440'}`,
+                              }}>
+                                {result.passed ? 'PASS' : 'FAIL'}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Name */}
+                          <div style={{ fontSize: 11, fontWeight: 700, color: isRunning ? scenario.badgeColor : t.textPrimary, fontFamily: 'monospace', marginBottom: 3, transition: 'color 0.2s' }}>
+                            {scenario.name}
+                          </div>
+
+                          {/* Description or progress or results */}
+                          {isRunning ? (
+                            <div style={{ marginBottom: 5 }}>
+                              <div style={{ height: 3, background: t.border, borderRadius: 2, marginBottom: 3, overflow: 'hidden' }}>
+                                <div style={{ height: '100%', width: `${testProgress}%`, background: scenario.badgeColor, borderRadius: 2, transition: 'width 0.3s' }} />
+                              </div>
+                              <div style={{ fontSize: 9, color: scenario.badgeColor, fontFamily: 'monospace' }}>{testProgress}% · {scenario.duration}s test</div>
+                            </div>
+                          ) : result ? (
+                            <div style={{ display: 'flex', gap: 4, marginBottom: 5 }}>
+                              <span style={{ fontSize: 9, color: t.textMuted, fontFamily: 'monospace' }}>err:{result.errorRate}%</span>
+                              <span style={{ fontSize: 9, color: t.textMuted, fontFamily: 'monospace' }}>p50:{result.latency}ms</span>
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: 9, color: t.textMuted, fontFamily: 'monospace', marginBottom: 5, lineHeight: 1.4, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                              {scenario.description}
+                            </div>
+                          )}
+
+                          {/* Run button */}
+                          <button
+                            onClick={() => isRunning ? stopTest() : runTest(scenario)}
+                            disabled={!!activeTest && !isRunning}
+                            style={{
+                              width: '100%', height: 22, borderRadius: 4,
+                              background: isRunning ? '#ef444415' : `${scenario.badgeColor}15`,
+                              border: `1px solid ${isRunning ? '#ef444440' : `${scenario.badgeColor}40`}`,
+                              color: isRunning ? '#ef4444' : scenario.badgeColor,
+                              fontSize: 9, fontFamily: 'monospace', fontWeight: 700, cursor: activeTest && !isRunning ? 'not-allowed' : 'pointer',
+                              opacity: activeTest && !isRunning ? 0.4 : 1,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                              transition: 'all 0.12s',
+                            }}
+                          >
+                            {isRunning ? '⏹ Stop' : result ? '↺ Re-run' : '▶ Run'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </>
           )}
         </div>

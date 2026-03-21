@@ -11,8 +11,9 @@ import 'reactflow/dist/style.css';
 import { useStore } from '@/store/useStore';
 import SystemNode from '@/components/nodes/SystemNode';
 import AnimatedEdge from './AnimatedEdge';
-import NodePalette from '@/components/panels/NodePalette';
 import { NodeData } from '@/simulation/types';
+import { getNodeConfig } from '@/utils/nodeRegistry';
+import { useAuthStore } from '@/store/authStore';
 
 // ─── Auto-Layout Algorithm ────────────────────────────────────────────────────
 function autoLayout(nodes: Node<NodeData>[], edges: Edge[]): Node<NodeData>[] {
@@ -211,6 +212,124 @@ function CanvasToolbar() {
   );
 }
 
+function PremiumModal({ nodeType, onClose, onActivated }: {
+  nodeType: string;
+  onClose: () => void;
+  onActivated: (nodeType: string) => void;
+}) {
+  const { activatePremium } = useAuthStore();
+  const [code, setCode] = useState('');
+  const [msg, setMsg] = useState('');
+  const cfg = getNodeConfig(nodeType);
+
+  const handleActivate = () => {
+    const ok = activatePremium(code.trim());
+    if (ok) {
+      setMsg('');
+      onActivated(nodeType);
+    } else {
+      setMsg('Invalid code. Try again.');
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9998,
+      background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }} onClick={onClose}>
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: '#080d14', border: '1px solid #f59e0b50',
+          borderRadius: 16, padding: '28px 32px', width: 420,
+          boxShadow: '0 0 60px #f59e0b20, 0 20px 80px #000000a0',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
+          <div style={{
+            width: 48, height: 48, borderRadius: 12,
+            background: '#f59e0b18', border: '1px solid #f59e0b40',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="#f59e0b">
+              <path d="M2 20h20v-4H2v4zm2-14l5 5 3-6 3 6 5-5-2 10H4L2 6z"/>
+            </svg>
+          </div>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#f59e0b', fontFamily: 'monospace' }}>
+              Premium Feature
+            </div>
+            <div style={{ fontSize: 12, color: '#8fa3b8', fontFamily: 'monospace', marginTop: 2 }}>
+              {cfg.label} requires premium access
+            </div>
+          </div>
+        </div>
+
+        <div style={{
+          background: '#f59e0b0c', border: '1px solid #f59e0b25',
+          borderRadius: 10, padding: '14px 16px', marginBottom: 20,
+          fontSize: 13, color: '#fde68a', fontFamily: 'monospace', lineHeight: 1.7,
+        }}>
+          This node is part of the Premium tier which includes all cloud provider nodes (AWS, GCP, Azure),
+          AI/ML services, enterprise databases, and advanced observability tools.
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: '#636e7b', fontFamily: 'monospace', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Activation Code
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              autoFocus
+              value={code}
+              onChange={e => { setCode(e.target.value); setMsg(''); }}
+              onKeyDown={e => { if (e.key === 'Enter') handleActivate(); }}
+              placeholder="Enter your activation code..."
+              style={{
+                flex: 1, background: '#050811',
+                border: `1px solid ${msg ? '#ef444450' : '#1e2d3d'}`,
+                borderRadius: 8, padding: '10px 14px',
+                color: '#e2eaf4', fontSize: 13, fontFamily: 'monospace',
+                outline: 'none', transition: 'border-color 0.15s',
+              }}
+              onFocus={e => { (e.target as HTMLInputElement).style.borderColor = '#f59e0b50'; }}
+              onBlur={e => { (e.target as HTMLInputElement).style.borderColor = msg ? '#ef444450' : '#1e2d3d'; }}
+            />
+            <button
+              onClick={handleActivate}
+              style={{
+                background: '#f59e0b20', border: '1px solid #f59e0b60',
+                borderRadius: 8, color: '#f59e0b', cursor: 'pointer',
+                padding: '10px 16px', fontSize: 13, fontFamily: 'monospace', fontWeight: 700,
+                flexShrink: 0,
+              }}
+            >
+              Activate
+            </button>
+          </div>
+          {msg && (
+            <div style={{ fontSize: 12, color: '#ef4444', marginTop: 6, fontFamily: 'monospace' }}>
+              {msg}
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={onClose}
+          style={{
+            width: '100%', background: 'transparent', border: '1px solid #1e2d3d',
+            borderRadius: 8, padding: '10px 0', color: '#636e7b',
+            fontSize: 13, fontFamily: 'monospace', cursor: 'pointer',
+          }}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function FlowCanvasInner() {
   const {
     nodes, edges,
@@ -218,6 +337,8 @@ function FlowCanvasInner() {
     selectNode, addNode,
     undo, redo,
   } = useStore();
+  const { isPremium } = useAuthStore();
+  const [premiumModal, setPremiumModal] = useState<{ nodeType: string; x: number; y: number } | null>(null);
 
   const { screenToFlowPosition } = useReactFlow();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -244,72 +365,95 @@ function FlowCanvasInner() {
     event.preventDefault();
     const nodeType = event.dataTransfer.getData('application/reactflow-nodetype') as NodeData['nodeType'];
     if (!nodeType) return;
+    const isPremiumNode = event.dataTransfer.getData('application/reactflow-premium') === '1';
+    if (isPremiumNode && !isPremium) {
+      setPremiumModal({ nodeType, x: event.clientX, y: event.clientY });
+      return;
+    }
     const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
     addNode(nodeType, position);
-  }, [addNode, screenToFlowPosition]);
+  }, [addNode, screenToFlowPosition, isPremium]);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   }, []);
 
+  const handlePremiumActivated = (nodeType: string) => {
+    if (premiumModal) {
+      const position = screenToFlowPosition({ x: premiumModal.x, y: premiumModal.y });
+      addNode(nodeType as NodeData['nodeType'], position);
+    }
+    setPremiumModal(null);
+  };
+
   return (
-    <div
-      ref={wrapperRef}
-      style={{ width: '100%', height: '100%' }}
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-    >
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onPaneClick={handlePaneClick}
-        nodeTypes={NODE_TYPES}
-        edgeTypes={EDGE_TYPES}
-        fitView
-        fitViewOptions={{ padding: 0.15 }}
-        defaultEdgeOptions={{ type: 'animatedEdge' }}
-        style={{ background: '#050811' }}
-        proOptions={{ hideAttribution: true }}
-        deleteKeyCode="Delete"
-        multiSelectionKeyCode="Shift"
-        connectionLineStyle={{ stroke: '#00d4ff', strokeWidth: 2, strokeDasharray: '4 3' }}
-        connectionLineType="bezier"
+    <>
+      {premiumModal && (
+        <PremiumModal
+          nodeType={premiumModal.nodeType}
+          onClose={() => setPremiumModal(null)}
+          onActivated={handlePremiumActivated}
+        />
+      )}
+      <div
+        ref={wrapperRef}
+        style={{ width: '100%', height: '100%' }}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
       >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={28} size={1} color="#1e2d3d55"
-        />
-        <Controls
-          style={{
-            background: '#0d1117', border: '1px solid #1e2d3d',
-            borderRadius: 8, boxShadow: '0 4px 20px #00000080',
-          }}
-        />
-        <MiniMap
-          style={{
-            background: '#080d14', border: '1px solid #1e2d3d',
-            borderRadius: 8, boxShadow: '0 4px 20px #00000080',
-          }}
-          nodeColor={(n) => {
-            const s = (n.data as NodeData)?.status;
-            if (s === 'overloaded' || s === 'failed') return '#ef4444';
-            if (s === 'stressed') return '#f59e0b';
-            if (s === 'healthy') return '#10b981';
-            return '#1e2d3d';
-          }}
-          maskColor="#05081188"
-        />
-        <Panel position="top-left" style={{ margin: '10px 0 0 10px' }}>
-          <NodePalette />
-        </Panel>
-        <Panel position="top-right" style={{ margin: '10px 10px 0 0' }}>
-          <CanvasToolbar />
-        </Panel>
-      </ReactFlow>
-    </div>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onPaneClick={handlePaneClick}
+          nodeTypes={NODE_TYPES}
+          edgeTypes={EDGE_TYPES}
+          fitView
+          fitViewOptions={{ padding: 0.15 }}
+          defaultEdgeOptions={{ type: 'animatedEdge' }}
+          style={{ background: '#050811' }}
+          proOptions={{ hideAttribution: true }}
+          deleteKeyCode="Delete"
+          multiSelectionKeyCode="Shift"
+          connectionLineStyle={{ stroke: '#00d4ff', strokeWidth: 2, strokeDasharray: '4 3' }}
+          connectionLineType="bezier"
+        >
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={28} size={1} color="#1e2d3d55"
+          />
+          <Controls
+            position="bottom-left"
+            style={{
+              background: '#0d1117', border: '1px solid #1e2d3d',
+              borderRadius: 8, boxShadow: '0 4px 20px #00000080',
+              bottom: 16, left: 16,
+            }}
+          />
+          <MiniMap
+            position="bottom-right"
+            nodeStrokeWidth={3}
+            zoomable
+            pannable
+            style={{
+              background: '#080d14',
+              border: '1px solid #1e2d3d',
+              borderRadius: 8,
+            }}
+            nodeColor={(node) => {
+              const cfg = getNodeConfig(node.data?.nodeType);
+              return cfg?.color?.border ?? '#374151';
+            }}
+            maskColor="#050811cc"
+          />
+          <Panel position="top-right" style={{ margin: '10px 10px 0 0' }}>
+            <CanvasToolbar />
+          </Panel>
+        </ReactFlow>
+      </div>
+    </>
   );
 }

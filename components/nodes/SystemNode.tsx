@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { Handle, Position, NodeProps } from 'reactflow';
 import { motion, AnimatePresence } from 'framer-motion';
 import { NodeData } from '@/simulation/types';
@@ -11,6 +11,7 @@ import NodeIcon from '@/utils/NodeIcon';
 function SystemNode({ id, data, selected }: NodeProps<NodeData>) {
   const selectNode = useStore((s) => s.selectNode);
   const handleClick = useCallback(() => selectNode(id), [id, selectNode]);
+  const [hovered, setHovered] = useState(false);
 
   const status = data.status || 'idle';
   const cfg = getNodeConfig(data.nodeType);
@@ -37,8 +38,109 @@ function SystemNode({ id, data, selected }: NodeProps<NodeData>) {
   const queueLimit = data.queue_limit ?? 50;
 
   return (
+    <>
+    {/* Hover tooltip - sibling to main node, outside overflow:hidden */}
+    {hovered && (
+      <div style={{
+        position: 'absolute',
+        bottom: '100%',
+        left: 0,
+        marginBottom: 8,
+        zIndex: 1000,
+        width: 260,
+        background: '#050c15',
+        border: '1px solid #1e3a50',
+        borderRadius: 10,
+        padding: '14px 16px',
+        boxShadow: '0 8px 40px #000000b0',
+        pointerEvents: 'none',
+      }}>
+        {/* Header row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+          <span style={{
+            padding: '2px 7px',
+            background: `${nc.border}20`,
+            border: `1px solid ${nc.border}50`,
+            borderRadius: 4,
+            fontSize: 9,
+            color: nc.text,
+            fontFamily: 'monospace',
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+          }}>
+            {cfg.category.replace('-', ' / ')}
+          </span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#dde5f0', fontFamily: 'monospace' }}>
+            {cfg.label}
+          </span>
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: '#1e3a50', marginBottom: 10 }} />
+
+        {/* Description */}
+        <div style={{ fontSize: 13, color: '#8fa3b8', lineHeight: 1.6, marginBottom: 10 }}>
+          {cfg.description}
+        </div>
+
+        {/* Divider */}
+        <div style={{ height: 1, background: '#1e3a50', marginBottom: 10 }} />
+
+        {/* Defaults row */}
+        <div style={{ fontSize: 10, color: '#636e7b', fontFamily: 'monospace', marginBottom: 8 }}>
+          <span style={{ color: '#4a6785', fontWeight: 700 }}>DEFAULTS: </span>
+          Processing {cfg.defaults.processing_time}ms
+          {' · '}Cap {cfg.defaults.max_capacity}/s
+          {' · '}Err {cfg.defaults.failure_rate}%
+        </div>
+
+        {/* Tags */}
+        {cfg.tags && cfg.tags.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            <span style={{ fontSize: 9, color: '#4a6785', fontFamily: 'monospace', fontWeight: 700, alignSelf: 'center' }}>TAGS:</span>
+            {cfg.tags.map((tag: string) => (
+              <span key={tag} style={{
+                padding: '2px 6px',
+                background: `${nc.border}15`,
+                border: `1px solid ${nc.border}30`,
+                borderRadius: 3,
+                fontSize: 9,
+                color: nc.text,
+                fontFamily: 'monospace',
+              }}>
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Arrow pointing down */}
+        <div style={{
+          position: 'absolute',
+          bottom: -7,
+          left: 16,
+          width: 12,
+          height: 7,
+          overflow: 'hidden',
+        }}>
+          <div style={{
+            width: 12,
+            height: 12,
+            background: '#050c15',
+            border: '1px solid #1e3a50',
+            transform: 'rotate(45deg)',
+            transformOrigin: 'center',
+            marginTop: -6,
+          }} />
+        </div>
+      </div>
+    )}
+
     <motion.div
       onClick={handleClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       initial={{ scale: 0.85, opacity: 0 }}
       animate={{
         scale: 1, opacity: 1,
@@ -227,6 +329,7 @@ function SystemNode({ id, data, selected }: NodeProps<NodeData>) {
       <Handle type="source" position={Position.Right}  style={hs(nc.border)} />
       <Handle type="source" position={Position.Bottom} style={hs(nc.border)} />
     </motion.div>
+    </>
   );
 }
 

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { subscribeWithSelector } from 'zustand/middleware';
+import { subscribeWithSelector, persist } from 'zustand/middleware';
 import {
   Node, Edge, NodeChange, EdgeChange,
   applyNodeChanges, applyEdgeChanges, addEdge, Connection,
@@ -191,6 +191,7 @@ const initialEdges = ADVANCED_PRESETS.ecommerce.edges;
 const initialHistory: HistoryEntry[] = [{ nodes: initialNodes, edges: initialEdges }];
 
 export const useStore = create<AppState>()(
+  persist(
   subscribeWithSelector((set, get) => ({
     nodes: initialNodes,
     edges: initialEdges,
@@ -258,7 +259,8 @@ export const useStore = create<AppState>()(
 
     resetCanvas: () => {
       get()._pushHistory();
-      set({ nodes: [], edges: [], selectedNodeId: null });
+      const preset = ADVANCED_PRESETS.ecommerce;
+      set({ nodes: preset.nodes, edges: preset.edges, selectedNodeId: null });
     },
 
     onNodesChange: (changes) => {
@@ -418,5 +420,13 @@ export const useStore = create<AppState>()(
       set((s) => ({ requestLog: [entry, ...s.requestLog].slice(0, 300) })),
 
     clearRequestLog: () => set({ requestLog: [] }),
-  }))
+  })),
+  {
+    name: 'infraflow-canvas',
+    partialize: (s) => ({
+      nodes: s.nodes,
+      edges: s.edges,
+    }),
+  }
+  )
 );

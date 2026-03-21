@@ -1,22 +1,22 @@
 'use client';
 
 import React, { useCallback, useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { NodeData } from '@/simulation/types';
+import { motion } from 'framer-motion';
 import { NODE_REGISTRY, CATEGORY_META, searchNodes, getNodeConfig } from '@/utils/nodeRegistry';
 import type { NodeCategory } from '@/utils/nodeRegistry';
 import NodeIcon from '@/utils/NodeIcon';
 import { BrandIcon } from '@/utils/BrandIcons';
 import { useUIStore } from '@/store/uiStore';
 import { THEMES } from '@/utils/theme';
+import { useAuthStore } from '@/store/authStore';
 
-export default function NodePalette() {
+export default function NodePalette({ embedded }: { embedded?: boolean }) {
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<NodeCategory | 'all'>('all');
   const [hovered, setHovered] = useState<string | null>(null);
-  const [collapsed, setCollapsed] = useState(false);
   const { theme } = useUIStore();
   const t = THEMES[theme];
+  const { isPremium } = useAuthStore();
 
   const results = useMemo(() => {
     let nodes = query ? searchNodes(query) : NODE_REGISTRY;
@@ -37,86 +37,63 @@ export default function NodePalette() {
     return map;
   }, [results, activeCategory]);
 
-  const onDragStart = useCallback((e: React.DragEvent, type: string) => {
+  const onDragStart = useCallback((e: React.DragEvent, type: string, premium: boolean) => {
     e.dataTransfer.setData('application/reactflow-nodetype', type);
+    e.dataTransfer.setData('application/reactflow-premium', premium ? '1' : '0');
     e.dataTransfer.effectAllowed = 'move';
   }, []);
 
   const categories = Object.keys(CATEGORY_META) as NodeCategory[];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
+    <div
       style={{
         background: t.surface,
-        backdropFilter: 'blur(20px)',
-        border: `1px solid ${t.border}`,
-        borderRadius: 12,
-        overflow: 'hidden',
-        width: collapsed ? 'auto' : 280,
-        maxHeight: collapsed ? 'none' : 'calc(100vh - 230px)',
-        boxShadow: '0 8px 40px #00000090',
         display: 'flex',
         flexDirection: 'column',
+        height: '100%',
+        width: '100%',
       }}
     >
       {/* Header */}
-      <div
-        onClick={() => collapsed && setCollapsed(false)}
-        style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '12px 14px',
-          background: t.surface2,
-          borderBottom: collapsed ? 'none' : `1px solid ${t.border}`,
-          flexShrink: 0,
-          cursor: collapsed ? 'pointer' : 'default',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
-              <path d="M12 2L21.5 7.5v9L12 22l-9.5-5.5v-9L12 2z" stroke={t.textSecondary} strokeWidth="1.5" strokeLinejoin="round"/>
-            </svg>
-          {!collapsed && (
-            <>
-              <span style={{ fontSize: 13, fontWeight: 700, color: t.textPrimary, fontFamily: 'monospace' }}>
-                Node Palette
-              </span>
-              <span style={{
-                padding: '2px 7px', background: t.border,
-                borderRadius: 5, fontSize: 12, color: t.textSecondary, fontFamily: 'monospace',
-                fontWeight: 600,
-              }}>
-                {NODE_REGISTRY.length}
-              </span>
-            </>
-          )}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '11px 14px',
+        background: t.surface2,
+        borderBottom: `1px solid ${t.border}`,
+        flexShrink: 0,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+            <path d="M12 2L21.5 7.5v9L12 22l-9.5-5.5v-9L12 2z" stroke={t.textSecondary} strokeWidth="1.5" strokeLinejoin="round"/>
+          </svg>
+          <span style={{ fontSize: 12, fontWeight: 700, color: t.textPrimary, fontFamily: 'monospace' }}>
+            Node Palette
+          </span>
+          <span style={{
+            padding: '1px 6px', background: t.border,
+            borderRadius: 4, fontSize: 11, color: t.textSecondary, fontFamily: 'monospace',
+            fontWeight: 600,
+          }}>
+            {NODE_REGISTRY.length}
+          </span>
         </div>
-        <button
-          onClick={(e) => { e.stopPropagation(); setCollapsed(c => !c); }}
-          title={collapsed ? 'Expand palette' : 'Collapse palette'}
-          style={{
-            width: 24, height: 24, borderRadius: 5,
-            background: t.border, border: `1px solid ${t.border2}`,
-            color: t.textSecondary, fontSize: 11, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, transition: 'all 0.12s',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.borderColor = `${t.accent}50`;
-            (e.currentTarget as HTMLElement).style.color = t.accent;
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.borderColor = t.border2;
-            (e.currentTarget as HTMLElement).style.color = t.textSecondary;
-          }}
-        >
-          {collapsed ? '▶' : '◀'}
-        </button>
+        {!isPremium && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            background: '#f59e0b15', border: '1px solid #f59e0b30',
+            borderRadius: 4, padding: '2px 7px',
+          }}>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="#f59e0b">
+              <path d="M2 20h20v-4H2v4zm2-14l5 5 3-6 3 6 5-5-2 10H4L2 6z"/>
+            </svg>
+            <span style={{ fontSize: 9, color: '#f59e0b', fontFamily: 'monospace', fontWeight: 700 }}>PREMIUM</span>
+          </div>
+        )}
       </div>
 
-      {/* Collapsible body */}
-      {!collapsed && <>
+      {/* Body */}
+      {<>
 
       {/* Search */}
       <div style={{ padding: '10px 12px', borderBottom: `1px solid ${t.border}`, flexShrink: 0 }}>
@@ -189,7 +166,8 @@ export default function NodePalette() {
                 key={cfg.id} cfg={cfg}
                 hovered={hovered === cfg.id}
                 onHover={setHovered}
-                onDragStart={onDragStart}
+                onDragStart={(e, type) => onDragStart(e, type, !!cfg.premium)}
+                isPremium={isPremium}
               />
             ))}
           </div>
@@ -224,7 +202,8 @@ export default function NodePalette() {
                     key={cfg.id} cfg={cfg}
                     hovered={hovered === cfg.id}
                     onHover={setHovered}
-                    onDragStart={onDragStart}
+                    onDragStart={(e, type) => onDragStart(e, type, !!cfg.premium)}
+                    isPremium={isPremium}
                   />
                 ))}
               </div>
@@ -234,16 +213,27 @@ export default function NodePalette() {
       </div>
 
       <div style={{
-        padding: '7px 12px', borderTop: `1px solid ${t.border}`,
-        fontSize: 12, color: t.textMuted, fontFamily: 'monospace', textAlign: 'center',
+        padding: '6px 12px', borderTop: `1px solid ${t.border}`,
+        fontSize: 11, color: t.textMuted, fontFamily: 'monospace', textAlign: 'center',
         flexShrink: 0,
+        background: t.surface2,
       }}>
-        Drag onto canvas ·{' '}
-        <span style={{ color: t.textSecondary }}>{results.length} of {NODE_REGISTRY.length}</span>
+        {!isPremium ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="#f59e0b">
+              <path d="M2 20h20v-4H2v4zm2-14l5 5 3-6 3 6 5-5-2 10H4L2 6z"/>
+            </svg>
+            <span style={{ color: '#f59e0b' }}>
+              Drop PRO nodes to unlock · activate in profile
+            </span>
+          </div>
+        ) : (
+          <span>Drag onto canvas · <span style={{ color: t.textSecondary }}>{results.length} / {NODE_REGISTRY.length}</span></span>
+        )}
       </div>
 
       </>}
-    </motion.div>
+    </div>
   );
 }
 
@@ -262,6 +252,7 @@ const CAT_ICONS: Record<string, { type: 'brand'; brand: string } | { type: 'svg'
   security:     { type: 'svg', el: (c) => <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 3L4 7v5c0 4.5 3.5 8.7 8 9.9C16.5 20.7 20 16.5 20 12V7l-8-4z" stroke={c} strokeWidth="1.5" strokeLinejoin="round"/></svg> },
   observability:{ type: 'svg', el: (c) => <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M3 17l4-5 4 3 4-6 4 3" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><path d="M3 21h18" stroke={c} strokeWidth="1.5" strokeLinecap="round"/></svg> },
   'ai-ml':      { type: 'svg', el: (c) => <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke={c} strokeWidth="1.5"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" stroke={c} strokeWidth="1.5" strokeLinecap="round"/></svg> },
+  servers:      { type: 'svg', el: (c) => <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="5" rx="1" stroke={c} strokeWidth="1.5"/><rect x="2" y="10" width="20" height="5" rx="1" stroke={c} strokeWidth="1.5"/><rect x="2" y="17" width="20" height="4" rx="1" stroke={c} strokeWidth="1.5"/><circle cx="19" cy="5.5" r="1" fill={c}/><circle cx="19" cy="12.5" r="1" fill={c}/></svg> },
 };
 
 function CatIcon({ id, color }: { id: string; color: string }) {
@@ -296,32 +287,43 @@ function CategoryPill({ id, label, color, active, onClick }: {
   );
 }
 
-function NodeItem({ cfg, hovered, onHover, onDragStart }: {
+function NodeItem({ cfg, hovered, onHover, onDragStart, isPremium }: {
   cfg: ReturnType<typeof getNodeConfig>;
   hovered: boolean;
   onHover: (id: string | null) => void;
   onDragStart: (e: React.DragEvent, type: string) => void;
+  isPremium: boolean;
 }) {
   const nc = cfg.color;
+  const isPremiumNode = !!cfg.premium;
+  const isLocked = isPremiumNode && !isPremium;
+
+  const handleDragStart = (e: React.DragEvent) => {
+    onDragStart(e, cfg.id);
+  };
+
   return (
     <motion.div
       draggable
-      onDragStart={(e) => onDragStart(e, cfg.id)}
+      onDragStart={handleDragStart}
       onMouseEnter={() => onHover(cfg.id)}
       onMouseLeave={() => onHover(null)}
       animate={{
         background: hovered ? '#0d1520' : 'transparent',
-        scale: hovered ? 1.02 : 1,
+        scale: hovered ? 1.015 : 1,
       }}
       style={{
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '7px 10px',
         minHeight: 44,
         borderRadius: 8,
-        cursor: 'grab', userSelect: 'none', marginBottom: 1,
+        cursor: 'grab',
+        userSelect: 'none', marginBottom: 1,
         borderLeft: hovered ? `3px solid ${nc.border}` : '3px solid transparent',
-        transition: 'border-color 0.2s, background 0.2s',
+        transition: 'border-color 0.2s',
+        position: 'relative',
       }}
+      title={isLocked ? `${cfg.label} — Premium node. Drop on canvas to unlock.` : cfg.description}
     >
       <span style={{
         width: 28, height: 28, flexShrink: 0,
@@ -337,6 +339,7 @@ function NodeItem({ cfg, hovered, onHover, onDragStart }: {
           fontFamily: 'monospace', fontWeight: 700,
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
           transition: 'color 0.12s', lineHeight: 1.3,
+          display: 'flex', alignItems: 'center', gap: 5,
         }}>
           {cfg.label}
         </div>
@@ -349,6 +352,26 @@ function NodeItem({ cfg, hovered, onHover, onDragStart }: {
           {cfg.tagline}
         </div>
       </div>
+      {/* Premium badge */}
+      {isPremiumNode && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 3,
+          background: isLocked ? '#f59e0b18' : '#10b98118',
+          border: `1px solid ${isLocked ? '#f59e0b40' : '#10b98140'}`,
+          borderRadius: 5, padding: '2px 6px', flexShrink: 0,
+        }}>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill={isLocked ? '#f59e0b' : '#10b981'}>
+            <path d="M2 20h20v-4H2v4zm2-14l5 5 3-6 3 6 5-5-2 10H4L2 6z"/>
+          </svg>
+          <span style={{
+            fontSize: 9, fontFamily: 'monospace', fontWeight: 800,
+            color: isLocked ? '#f59e0b' : '#10b981',
+            letterSpacing: '0.05em',
+          }}>
+            {isLocked ? 'PRO' : 'PRO'}
+          </span>
+        </div>
+      )}
     </motion.div>
   );
 }
