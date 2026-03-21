@@ -1,26 +1,91 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  background: #050811;
+  color: #cdd9e5;
+  font-family: 'Geist Mono', 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  -webkit-font-smoothing: antialiased;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Scrollbars */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: #080d14; }
+::-webkit-scrollbar-thumb { background: #1e2d3d; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #374151; }
+
+/* React Flow chrome */
+.react-flow__controls {
+  background: #0d1117 !important;
+  border: 1px solid #1e2d3d !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 20px #00000080 !important;
+}
+.react-flow__controls-button {
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid #1e2d3d !important;
+  color: #636e7b !important;
+  fill: #636e7b !important;
+  transition: all 0.12s !important;
+}
+.react-flow__controls-button:hover {
+  background: #1e2d3d !important;
+  color: #00d4ff !important;
+  fill: #00d4ff !important;
+}
+.react-flow__controls-button:last-child {
+  border-bottom: none !important;
+}
+.react-flow__minimap {
+  background: #080d14 !important;
+  border: 1px solid #1e2d3d !important;
+  border-radius: 8px !important;
+}
+.react-flow__selection {
+  background: #00d4ff10 !important;
+  border: 1px solid #00d4ff60 !important;
+}
+.react-flow__nodesselection-rect {
+  background: #00d4ff08 !important;
+  border: 1px solid #00d4ff40 !important;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Range inputs */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  border-radius: 2px;
+  background: #1e2d3d;
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  background: #00d4ff;
+  cursor: pointer;
+  box-shadow: 0 0 8px #00d4ff80;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.3);
+  box-shadow: 0 0 12px #00d4ff;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Keyboard shortcut chips */
+kbd {
+  display: inline-block;
+  background: #1e2d3d;
+  border: 1px solid #374151;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 9px;
+  font-family: monospace;
+  color: #9ba8b5;
 }
