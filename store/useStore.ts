@@ -186,8 +186,8 @@ const emptyMetrics: SimulationMetrics = {
   healthScore: defaultHealthScore,
 };
 
-const initialNodes = ADVANCED_PRESETS.ecommerce.nodes;
-const initialEdges = ADVANCED_PRESETS.ecommerce.edges;
+const initialNodes: Node<NodeData>[] = [];
+const initialEdges: Edge[] = [];
 const initialHistory: HistoryEntry[] = [{ nodes: initialNodes, edges: initialEdges }];
 
 export const useStore = create<AppState>()(
@@ -259,8 +259,7 @@ export const useStore = create<AppState>()(
 
     resetCanvas: () => {
       get()._pushHistory();
-      const preset = ADVANCED_PRESETS.ecommerce;
-      set({ nodes: preset.nodes, edges: preset.edges, selectedNodeId: null });
+      set({ nodes: [], edges: [], selectedNodeId: null });
     },
 
     onNodesChange: (changes) => {
@@ -423,6 +422,8 @@ export const useStore = create<AppState>()(
   })),
   {
     name: 'infraflow-canvas',
+    version: 2,
+    migrate: () => ({ nodes: [], edges: [] }),
     partialize: (s) => ({
       nodes: s.nodes,
       edges: s.edges,

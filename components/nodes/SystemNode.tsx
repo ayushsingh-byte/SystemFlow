@@ -225,25 +225,22 @@ function SystemNode({ id, data, selected }: NodeProps<NodeData>) {
               </div>
             </div>
 
-            {/* Queue size chip */}
-            {queueSize > 0 && (
-              <motion.div
-                initial={{ opacity: 0, scaleX: 0.8 }}
-                animate={{ opacity: 1, scaleX: 1 }}
-                exit={{ opacity: 0, scaleX: 0.8 }}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 4,
-                  background: queueSize > queueLimit * 0.8 ? '#ef444420' : '#f59e0b15',
-                  border: `1px solid ${queueSize > queueLimit * 0.8 ? '#ef444440' : '#f59e0b40'}`,
-                  borderRadius: 4, padding: '2px 7px', marginBottom: 6,
-                  fontSize: 10, fontFamily: 'monospace',
-                  color: queueSize > queueLimit * 0.8 ? '#ef4444' : '#f59e0b',
-                  fontWeight: 700,
-                }}
-              >
+            {/* Queue size chip — fixed height to prevent layout shift */}
+            <div style={{ height: 22, marginBottom: 4, display: 'flex', alignItems: 'center' }}>
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 4,
+                background: queueSize > queueLimit * 0.8 ? '#ef444420' : '#f59e0b15',
+                border: `1px solid ${queueSize > queueLimit * 0.8 ? '#ef444440' : '#f59e0b40'}`,
+                borderRadius: 4, padding: '2px 7px',
+                fontSize: 10, fontFamily: 'monospace',
+                color: queueSize > queueLimit * 0.8 ? '#ef4444' : '#f59e0b',
+                fontWeight: 700,
+                opacity: queueSize > 0 ? 1 : 0,
+                transition: 'opacity 0.2s',
+              }}>
                 <span>Q: {queueSize}/{queueLimit}</span>
-              </motion.div>
-            )}
+              </div>
+            </div>
 
             {/* Stat chips */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5 }}>
@@ -254,31 +251,25 @@ function SystemNode({ id, data, selected }: NodeProps<NodeData>) {
               } />
             </div>
 
-            {/* Live utilization badge */}
-            <AnimatePresence>
-              {isActive && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  style={{
-                    marginTop: 7, paddingTop: 7,
-                    borderTop: `1px solid ${nc.border}18`,
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  }}
-                >
-                  <span style={{ fontSize: 10, color: '#636e7b', fontFamily: 'monospace' }}>
-                    utilization
-                  </span>
-                  <motion.span
-                    animate={{ color: utilization > 0.8 ? '#ef4444' : utilization > 0.6 ? '#f59e0b' : '#10b981' }}
-                    style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700 }}
-                  >
-                    {Math.round(utilization * 100)}%
-                  </motion.span>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            {/* Live utilization — always reserve height, fade in/out to avoid layout shift */}
+            <div style={{
+              marginTop: 7, paddingTop: 7,
+              borderTop: `1px solid ${nc.border}18`,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              opacity: isActive ? 1 : 0,
+              transition: 'opacity 0.25s',
+              pointerEvents: 'none',
+            }}>
+              <span style={{ fontSize: 10, color: '#636e7b', fontFamily: 'monospace' }}>
+                utilization
+              </span>
+              <motion.span
+                animate={{ color: utilization > 0.8 ? '#ef4444' : utilization > 0.6 ? '#f59e0b' : '#10b981' }}
+                style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 700 }}
+              >
+                {Math.round(utilization * 100)}%
+              </motion.span>
+            </div>
           </>
         )}
 

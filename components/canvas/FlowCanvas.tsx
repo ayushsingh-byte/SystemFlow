@@ -15,6 +15,184 @@ import { NodeData } from '@/simulation/types';
 import { getNodeConfig } from '@/utils/nodeRegistry';
 import { useAuthStore } from '@/store/authStore';
 
+// ─── Overload Alert Banner ────────────────────────────────────────────────────
+function OverloadBanner() {
+  const nodes = useStore((s) => s.nodes);
+  const running = useStore((s) => s.simConfig.running);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+
+  const overloaded = nodes.filter(
+    n => (n.data.status === 'overloaded' || n.data.status === 'failed') &&
+         !dismissed.has(n.id)
+  );
+
+  // Reset dismissed set when sim stops
+  useEffect(() => {
+    if (!running) setDismissed(new Set());
+  }, [running]);
+
+  if (!running || overloaded.length === 0) return null;
+
+  return (
+    <div style={{
+      position: 'absolute', top: 56, left: '50%', transform: 'translateX(-50%)',
+      zIndex: 999, display: 'flex', flexDirection: 'column', gap: 6,
+      pointerEvents: 'none',
+    }}>
+      {overloaded.slice(0, 4).map(n => {
+        const util = n.data.max_capacity > 0
+          ? Math.round((n.data.currentLoad / n.data.max_capacity) * 100)
+          : 100;
+        const isFailed = n.data.status === 'failed';
+        return (
+          <div
+            key={n.id}
+            style={{
+              pointerEvents: 'all',
+              display: 'flex', alignItems: 'center', gap: 10,
+              background: isFailed ? '#1a0808' : '#1a0d04',
+              border: `1px solid ${isFailed ? '#dc262660' : '#ef444450'}`,
+              borderRadius: 8, padding: '7px 14px',
+              boxShadow: `0 4px 24px ${isFailed ? '#dc262640' : '#ef444430'}`,
+              minWidth: 280, maxWidth: 360,
+            }}
+          >
+            <div style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: isFailed ? '#dc2626' : '#ef4444',
+              boxShadow: `0 0 8px ${isFailed ? '#dc2626' : '#ef4444'}`,
+              flexShrink: 0,
+            }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <span style={{
+                fontSize: 11, color: isFailed ? '#fca5a5' : '#fbbf24',
+                fontFamily: 'monospace', fontWeight: 700,
+              }}>
+                {isFailed ? '✕ FAILED' : '⚠ OVERLOADED'}
+              </span>
+              <span style={{
+                fontSize: 11, color: '#dde5f0', fontFamily: 'monospace', marginLeft: 8,
+              }}>
+                {n.data.label}
+              </span>
+              <span style={{
+                fontSize: 10, color: '#9ba8b5', fontFamily: 'monospace', marginLeft: 6,
+              }}>
+                {util}% load
+              </span>
+            </div>
+            <button
+              onClick={() => setDismissed(d => new Set([...d, n.id]))}
+              style={{
+                background: 'transparent', border: 'none', color: '#636e7b',
+                cursor: 'pointer', fontSize: 14, padding: '0 2px', lineHeight: 1,
+                flexShrink: 0,
+              }}
+            >
+              ×
+            </button>
+          </div>
+        );
+      })}
+      {overloaded.length > 4 && (
+        <div style={{
+          pointerEvents: 'all',
+          fontSize: 10, color: '#ef4444', fontFamily: 'monospace',
+          textAlign: 'center', padding: '4px 14px',
+          background: '#1a0808', border: '1px solid #ef444430',
+          borderRadius: 8,
+        }}>
+          +{overloaded.length - 4} more overloaded nodes
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Node Context Menu ────────────────────────────────────────────────────────
+function NodeContextMenu({
+  nodeId, x, y, onClose,
+}: {
+  nodeId: string;
+  x: number; y: number;
+  onClose: () => void;
+}) {
+  const { duplicateNode, deleteNode, updateNodeData, selectNode, nodes } = useStore();
+  const node = nodes.find(n => n.id === nodeId);
+  if (!node) return null;
+
+  const isEnabled = node.data.enabled !== false;
+
+  const menuItems: { label: string; color: string; action: () => void }[] = [
+    {
+      label: '◎ Inspect',
+      color: '#8b5cf6',
+      action: () => { selectNode(nodeId); onClose(); },
+    },
+    {
+      label: '⊕ Duplicate',
+      color: '#3b82f6',
+      action: () => { duplicateNode(nodeId); onClose(); },
+    },
+    {
+      label: isEnabled ? '⊘ Disable Node' : '⊙ Enable Node',
+      color: isEnabled ? '#f59e0b' : '#10b981',
+      action: () => { updateNodeData(nodeId, { enabled: !isEnabled }); onClose(); },
+    },
+    {
+      label: '✕ Delete',
+      color: '#ef4444',
+      action: () => { deleteNode(nodeId); onClose(); },
+    },
+  ];
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        style={{ position: 'fixed', inset: 0, zIndex: 8999 }}
+        onClick={onClose}
+        onContextMenu={e => { e.preventDefault(); onClose(); }}
+      />
+      {/* Menu */}
+      <div style={{
+        position: 'fixed', left: x, top: y, zIndex: 9000,
+        background: '#080d14', border: '1px solid #1e2d3d',
+        borderRadius: 10, padding: '6px 0',
+        boxShadow: '0 8px 40px #000000c0, 0 0 0 1px #1e2d3d',
+        minWidth: 168,
+      }}>
+        <div style={{
+          padding: '5px 14px 7px', fontSize: 10,
+          color: '#636e7b', fontFamily: 'monospace', fontWeight: 700,
+          textTransform: 'uppercase', letterSpacing: '0.08em',
+          borderBottom: '1px solid #1e2d3d', marginBottom: 4,
+        }}>
+          {node.data.label}
+        </div>
+        {menuItems.map(item => (
+          <button
+            key={item.label}
+            onClick={item.action}
+            style={{
+              display: 'block', width: '100%', textAlign: 'left',
+              background: 'transparent', border: 'none',
+              padding: '8px 14px',
+              fontSize: 12, fontFamily: 'monospace', color: item.color,
+              cursor: 'pointer',
+              transition: 'background 0.1s',
+            }}
+            onMouseEnter={e => { (e.target as HTMLButtonElement).style.background = `${item.color}18`; }}
+            onMouseLeave={e => { (e.target as HTMLButtonElement).style.background = 'transparent'; }}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+    </>
+  );
+}
+
 // ─── Auto-Layout Algorithm ────────────────────────────────────────────────────
 function autoLayout(nodes: Node<NodeData>[], edges: Edge[]): Node<NodeData>[] {
   if (nodes.length === 0) return nodes;
@@ -339,6 +517,7 @@ function FlowCanvasInner() {
   } = useStore();
   const { isPremium } = useAuthStore();
   const [premiumModal, setPremiumModal] = useState<{ nodeType: string; x: number; y: number } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ nodeId: string; x: number; y: number } | null>(null);
 
   const { screenToFlowPosition } = useReactFlow();
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -354,12 +533,23 @@ function FlowCanvasInner() {
         e.preventDefault();
         redo();
       }
+      if (e.key === 'Escape') {
+        setContextMenu(null);
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [undo, redo]);
 
-  const handlePaneClick = useCallback(() => selectNode(null), [selectNode]);
+  const handlePaneClick = useCallback(() => {
+    selectNode(null);
+    setContextMenu(null);
+  }, [selectNode]);
+
+  const handleNodeContextMenu = useCallback((e: React.MouseEvent, node: Node) => {
+    e.preventDefault();
+    setContextMenu({ nodeId: node.id, x: e.clientX, y: e.clientY });
+  }, []);
 
   const handleDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -396,12 +586,21 @@ function FlowCanvasInner() {
           onActivated={handlePremiumActivated}
         />
       )}
+      {contextMenu && (
+        <NodeContextMenu
+          nodeId={contextMenu.nodeId}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
       <div
         ref={wrapperRef}
-        style={{ width: '100%', height: '100%' }}
+        style={{ width: '100%', height: '100%', position: 'relative' }}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
       >
+        <OverloadBanner />
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -409,6 +608,7 @@ function FlowCanvasInner() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onPaneClick={handlePaneClick}
+          onNodeContextMenu={handleNodeContextMenu}
           nodeTypes={NODE_TYPES}
           edgeTypes={EDGE_TYPES}
           fitView

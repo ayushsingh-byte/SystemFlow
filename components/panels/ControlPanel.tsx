@@ -258,6 +258,7 @@ export default function ControlPanel() {
 
   const { running, paused, trafficRate, failureInjection, trafficPattern } = simConfig;
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
+  const [rateInputVal, setRateInputVal] = useState(String(trafficRate));
   const [profileConfirmed, setProfileConfirmed] = useState<string | null>(null);
 
   // High traffic modal state
@@ -267,29 +268,36 @@ export default function ControlPanel() {
   // Test Lab state
   const [activeTest, setActiveTest] = useState<string | null>(null);
   const [testProgress, setTestProgress] = useState(0);
-  const [testResults, setTestResults] = useState<Record<string, { passed: boolean; errorRate: number; latency: number; throughput: number }>>({});
+  const [testResults, setTestResults] = useState<Record<string, {
+    passed: boolean;
+    errorRate: number;
+    latency: number;
+    throughput: number;
+    overloadedNodes?: string[];
+    failReason?: string;
+  }>>({});
   const testTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const overloadCheckRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => { if (testTimerRef.current) clearInterval(testTimerRef.current); };
+    return () => {
+      if (testTimerRef.current) clearInterval(testTimerRef.current);
+      if (overloadCheckRef.current) clearInterval(overloadCheckRef.current);
+    };
   }, []);
 
   const stopTest = useCallback(() => {
-    if (testTimerRef.current) {
-      clearInterval(testTimerRef.current);
-      testTimerRef.current = null;
-    }
+    if (testTimerRef.current) { clearInterval(testTimerRef.current); testTimerRef.current = null; }
+    if (overloadCheckRef.current) { clearInterval(overloadCheckRef.current); overloadCheckRef.current = null; }
     stopSimulation();
     setActiveTest(null);
     setTestProgress(0);
   }, [stopSimulation]);
 
   const runTest = useCallback((scenario: TestScenario) => {
-    if (testTimerRef.current) {
-      clearInterval(testTimerRef.current);
-      testTimerRef.current = null;
-    }
+    if (testTimerRef.current) { clearInterval(testTimerRef.current); testTimerRef.current = null; }
+    if (overloadCheckRef.current) { clearInterval(overloadCheckRef.current); overloadCheckRef.current = null; }
 
     if (running) stopSimulation();
     setActiveTest(scenario.id);
@@ -305,6 +313,22 @@ export default function ControlPanel() {
       const startTime = Date.now();
       const totalMs = scenario.duration * 1000;
 
+      // Track every node that ever becomes overloaded or failed during this test
+      const overloadedSet = new Map<string, number>(); // label → peak load %
+      overloadCheckRef.current = setInterval(() => {
+        const nodes = useStore.getState().nodes;
+        for (const n of nodes) {
+          if (n.data.status === 'overloaded' || n.data.status === 'failed') {
+            const pct = n.data.max_capacity > 0
+              ? Math.round((n.data.currentLoad / n.data.max_capacity) * 100)
+              : 100;
+            const label = n.data.label || n.data.nodeType;
+            const prev = overloadedSet.get(label) || 0;
+            overloadedSet.set(label, Math.max(prev, pct));
+          }
+        }
+      }, 150);
+
       // Progress ticker
       testTimerRef.current = setInterval(() => {
         const elapsed = Date.now() - startTime;
@@ -313,15 +337,28 @@ export default function ControlPanel() {
 
       // End timer
       setTimeout(() => {
-        if (testTimerRef.current) {
-          clearInterval(testTimerRef.current);
-          testTimerRef.current = null;
-        }
+        if (testTimerRef.current) { clearInterval(testTimerRef.current); testTimerRef.current = null; }
+        if (overloadCheckRef.current) { clearInterval(overloadCheckRef.current); overloadCheckRef.current = null; }
         stopSimulation();
         setTestProgress(100);
 
         const m = useStore.getState().metrics;
-        const passed = m.errorRate <= scenario.maxErrorRate && m.avgLatency <= scenario.maxLatency;
+        const overloadedNodes = Array.from(overloadedSet.entries()).map(([name, pct]) => `${name} (${pct}%)`);
+        const hadOverload = overloadedNodes.length > 0;
+
+        // A test FAILS if:
+        // 1. Any node was overloaded at any point (peak load = 100% capacity), OR
+        // 2. Final error rate exceeded threshold, OR
+        // 3. Final avg latency exceeded threshold
+        const metricsFail = m.errorRate > scenario.maxErrorRate || m.avgLatency > scenario.maxLatency;
+        const passed = !hadOverload && !metricsFail;
+
+        const failReason = hadOverload
+          ? `Node overload detected: ${overloadedNodes.join(' · ')}`
+          : m.errorRate > scenario.maxErrorRate
+            ? `Error rate ${m.errorRate.toFixed(1)}% exceeded limit ${scenario.maxErrorRate}%`
+            : `Latency ${Math.round(m.avgLatency)}ms exceeded limit ${scenario.maxLatency}ms`;
+
         setTestResults(prev => ({
           ...prev,
           [scenario.id]: {
@@ -329,6 +366,8 @@ export default function ControlPanel() {
             errorRate: parseFloat(m.errorRate.toFixed(1)),
             latency: Math.round(m.avgLatency),
             throughput: parseFloat(m.throughput.toFixed(1)),
+            overloadedNodes: hadOverload ? overloadedNodes : undefined,
+            failReason: passed ? undefined : failReason,
           },
         }));
         setActiveTest(null);
@@ -341,6 +380,7 @@ export default function ControlPanel() {
   const handleSliderChange = (sv: number) => {
     const rate = sliderToRate(sv);
     setTrafficRate(rate);
+    setRateInputVal(String(rate));
     setActiveProfileId(null);
   };
 
@@ -497,7 +537,7 @@ export default function ControlPanel() {
 
         {/* Tab content area */}
         <div style={{
-          height: ribbonTab === 'testlab' ? 200 : 76,
+          height: ribbonTab === 'testlab' ? 220 : 76,
           display: 'flex',
           alignItems: ribbonTab === 'testlab' ? 'flex-start' : 'center',
           padding: ribbonTab === 'testlab' ? '10px 14px 8px' : '0 14px',
@@ -559,23 +599,56 @@ export default function ControlPanel() {
           {/* TRAFFIC tab */}
           {ribbonTab === 'traffic' && (
             <>
-              {/* Rate slider */}
+              {/* Rate slider + direct input */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                 <div>
-                  <div style={{ fontSize: 9, color: t.textMuted, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                  <div style={{ fontSize: 9, color: t.textMuted, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>
                     Traffic Rate
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
-                    <span style={{ fontSize: 16, color: t.accent, fontFamily: 'monospace', fontWeight: 800 }}>
-                      {fmtRate(trafficRate)}
-                    </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <input
+                      type="number"
+                      min={1}
+                      max={1000000}
+                      value={rateInputVal}
+                      onChange={e => setRateInputVal(e.target.value)}
+                      onBlur={() => {
+                        const n = parseInt(rateInputVal, 10);
+                        if (!isNaN(n) && n >= 1) {
+                          handleSliderChange(rateToSlider(Math.min(1000000, n)));
+                        } else {
+                          setRateInputVal(String(trafficRate));
+                        }
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          const n = parseInt(rateInputVal, 10);
+                          if (!isNaN(n) && n >= 1) {
+                            handleSliderChange(rateToSlider(Math.min(1000000, n)));
+                          } else {
+                            setRateInputVal(String(trafficRate));
+                          }
+                          (e.target as HTMLInputElement).blur();
+                        }
+                      }}
+                      style={{
+                        width: 72, background: '#050810',
+                        border: `1px solid ${t.accent}50`,
+                        borderRadius: 5, padding: '3px 6px',
+                        fontSize: 14, color: t.accent, fontFamily: 'monospace', fontWeight: 800,
+                        outline: 'none', textAlign: 'right',
+                      }}
+                    />
                     <span style={{ fontSize: 9, color: t.textMuted, fontFamily: 'monospace' }}>req/s</span>
                   </div>
                 </div>
                 <div style={{ width: 120 }}>
                   <input
                     type="range" min={1} max={100} step={1} value={sliderValue}
-                    onChange={(e) => handleSliderChange(Number(e.target.value))}
+                    onChange={(e) => {
+                      handleSliderChange(Number(e.target.value));
+                      setRateInputVal(String(sliderToRate(Number(e.target.value))));
+                    }}
                     style={{ width: '100%', accentColor: t.accent, cursor: 'pointer', height: 4 }}
                   />
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 1 }}>
@@ -723,7 +796,7 @@ export default function ControlPanel() {
                       const borderCol = result ? (result.passed ? '#10b98140' : '#ef444440') : (isRunning ? `${scenario.badgeColor}50` : t.border);
                       return (
                         <div key={scenario.id} style={{
-                          width: 158, flexShrink: 0,
+                          width: 172, flexShrink: 0,
                           background: isRunning ? `${scenario.badgeColor}08` : result ? (result.passed ? '#10b98108' : '#ef444408') : t.surface,
                           border: `1px solid ${borderCol}`,
                           borderRadius: 7, padding: '8px 9px',
@@ -764,9 +837,22 @@ export default function ControlPanel() {
                               <div style={{ fontSize: 9, color: scenario.badgeColor, fontFamily: 'monospace' }}>{testProgress}% · {scenario.duration}s test</div>
                             </div>
                           ) : result ? (
-                            <div style={{ display: 'flex', gap: 4, marginBottom: 5 }}>
-                              <span style={{ fontSize: 9, color: t.textMuted, fontFamily: 'monospace' }}>err:{result.errorRate}%</span>
-                              <span style={{ fontSize: 9, color: t.textMuted, fontFamily: 'monospace' }}>p50:{result.latency}ms</span>
+                            <div style={{ marginBottom: 5 }}>
+                              <div style={{ display: 'flex', gap: 4, marginBottom: result.failReason ? 4 : 0 }}>
+                                <span style={{ fontSize: 9, color: t.textMuted, fontFamily: 'monospace' }}>err:{result.errorRate}%</span>
+                                <span style={{ fontSize: 9, color: t.textMuted, fontFamily: 'monospace' }}>p50:{result.latency}ms</span>
+                              </div>
+                              {result.failReason && (
+                                <div style={{
+                                  fontSize: 8, color: '#ef4444', fontFamily: 'monospace',
+                                  lineHeight: 1.4, background: '#ef444410',
+                                  border: '1px solid #ef444430', borderRadius: 3,
+                                  padding: '2px 5px',
+                                  wordBreak: 'break-word',
+                                }}>
+                                  ⚠ {result.failReason}
+                                </div>
+                              )}
                             </div>
                           ) : (
                             <div style={{ fontSize: 9, color: t.textMuted, fontFamily: 'monospace', marginBottom: 5, lineHeight: 1.4, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>

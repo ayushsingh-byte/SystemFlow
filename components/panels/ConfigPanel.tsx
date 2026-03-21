@@ -20,11 +20,27 @@ function SliderField({ field, value, onUpdate }: {
   const actual = value ?? min;
   const pct = Math.min(100, Math.max(0, ((actual - min) / (max - min)) * 100));
 
+  const [editing, setEditing] = useState(false);
+  const [inputVal, setInputVal] = useState('');
+
   const fmt = (v: number) => {
     if (v >= 1000000) return `${(v / 1000000).toFixed(1)}M`;
     if (v >= 1000) return `${(v / 1000).toFixed(1)}k`;
     if (Number.isInteger(v)) return String(v);
     return v.toFixed(1);
+  };
+
+  const startEdit = () => {
+    setInputVal(String(actual));
+    setEditing(true);
+  };
+
+  const commitEdit = () => {
+    const n = parseFloat(inputVal);
+    if (!isNaN(n)) {
+      onUpdate(field.key as string, Math.min(max, Math.max(min, n)));
+    }
+    setEditing(false);
   };
 
   return (
@@ -34,14 +50,46 @@ function SliderField({ field, value, onUpdate }: {
           <span style={{ fontSize: 13, color: '#c8d8e8', fontFamily: 'monospace', fontWeight: 600 }}>{field.label}</span>
           <div style={{ fontSize: 11, color: '#4a5a6a', fontFamily: 'monospace', marginTop: 2 }}>{field.description}</div>
         </div>
-        <div style={{
-          background: '#050810', border: '1px solid #1e2d3d',
-          borderRadius: 6, padding: '3px 10px',
-          fontSize: 14, color: '#00d4ff', fontFamily: 'monospace', fontWeight: 800,
-          minWidth: 56, textAlign: 'center', flexShrink: 0, marginLeft: 8,
-        }}>
-          {fmt(actual)}{unit}
-        </div>
+        {editing ? (
+          <input
+            autoFocus
+            type="number"
+            min={min}
+            max={max}
+            step={step}
+            value={inputVal}
+            onChange={e => setInputVal(e.target.value)}
+            onBlur={commitEdit}
+            onKeyDown={e => {
+              if (e.key === 'Enter') commitEdit();
+              if (e.key === 'Escape') setEditing(false);
+            }}
+            style={{
+              background: '#050810', border: '1px solid #00d4ff',
+              borderRadius: 6, padding: '3px 8px',
+              fontSize: 13, color: '#00d4ff', fontFamily: 'monospace', fontWeight: 800,
+              width: 80, textAlign: 'center', flexShrink: 0, marginLeft: 8,
+              outline: 'none',
+            }}
+          />
+        ) : (
+          <div
+            onClick={startEdit}
+            title="Click to type exact value"
+            style={{
+              background: '#050810', border: '1px solid #1e2d3d',
+              borderRadius: 6, padding: '3px 10px',
+              fontSize: 14, color: '#00d4ff', fontFamily: 'monospace', fontWeight: 800,
+              minWidth: 56, textAlign: 'center', flexShrink: 0, marginLeft: 8,
+              cursor: 'text',
+              transition: 'border-color 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = '#00d4ff50')}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = '#1e2d3d')}
+          >
+            {fmt(actual)}{unit}
+          </div>
+        )}
       </div>
       <div style={{ position: 'relative', height: 8 }}>
         <div style={{

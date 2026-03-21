@@ -42,17 +42,12 @@ function AnimatedEdge({
   const returnParticleRefs = useRef<ParticleRefs[]>(
     RETURN_PARTICLES.map(() => ({ circle: null, trail: null }))
   );
-  const activeRef = useRef(false);
-  const animFrames = useRef<number[]>([]);
 
-  useEffect(() => {
-    activeRef.current = active;
+  // Separate tracking for timeouts (pending launches) and RAF IDs (in-flight animations)
+  const timeoutIds = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const rafIds = useRef<number[]>([]);
 
-    // Cancel any running animations
-    animFrames.current.forEach(id => cancelAnimationFrame(id));
-    animFrames.current = [];
-
-    // Hide all particles
+  const hideAll = () => {
     particleRefs.current.forEach(r => {
       if (r.circle) r.circle.style.display = 'none';
       if (r.trail) r.trail.style.display = 'none';
@@ -61,150 +56,159 @@ function AnimatedEdge({
       if (r.circle) r.circle.style.display = 'none';
       if (r.trail) r.trail.style.display = 'none';
     });
+  };
 
-    if (!active || !pathRef.current) return;
+  const cancelAll = () => {
+    timeoutIds.current.forEach(clearTimeout);
+    timeoutIds.current = [];
+    rafIds.current.forEach(cancelAnimationFrame);
+    rafIds.current = [];
+  };
 
-    const path = pathRef.current;
-    const totalLength = path.getTotalLength();
+  const cancelPendingLaunches = () => {
+    timeoutIds.current.forEach(clearTimeout);
+    timeoutIds.current = [];
+    // Do NOT cancel rafIds — let in-flight particles complete naturally
+  };
 
-    PARTICLES.forEach((config, idx) => {
-      const refs = particleRefs.current[idx];
-      if (!refs.circle || !refs.trail) return;
+  useEffect(() => {
+    if (active) {
+      // Fresh start: cancel everything and relaunch
+      cancelAll();
+      hideAll();
 
-      const duration = 420; // ms for full traversal
-      let startTime: number | null = null;
+      if (!pathRef.current) return;
+      const path = pathRef.current;
+      const totalLength = path.getTotalLength();
 
-      const runParticle = () => {
-        const circle = refs.circle!;
-        const trail = refs.trail!;
+      // Forward particles (cyan, source→target)
+      PARTICLES.forEach((config, idx) => {
+        const refs = particleRefs.current[idx];
+        if (!refs.circle || !refs.trail) return;
 
-        if (!circle || !trail) return;
-        circle.style.display = 'block';
-        trail.style.display = 'block';
-        startTime = null;
+        const duration = 420;
 
-        const step = (ts: number) => {
-          if (!startTime) startTime = ts;
-          const elapsed = ts - startTime;
-          const progress = Math.min(elapsed / duration, 1);
+        const runParticle = () => {
+          const circle = refs.circle!;
+          const trail = refs.trail!;
+          if (!circle || !trail) return;
+          circle.style.display = 'block';
+          trail.style.display = 'block';
+          let startTime: number | null = null;
 
-          // Ease in-out
-          const eased = progress < 0.5
-            ? 2 * progress * progress
-            : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+          const step = (ts: number) => {
+            if (!startTime) startTime = ts;
+            const elapsed = ts - startTime;
+            const progress = Math.min(elapsed / duration, 1);
 
-          const pt = path.getPointAtLength(eased * totalLength);
-          const trailProgress = Math.max(0, eased - 0.05);
-          const tpt = path.getPointAtLength(trailProgress * totalLength);
+            const eased = progress < 0.5
+              ? 2 * progress * progress
+              : 1 - Math.pow(-2 * progress + 2, 2) / 2;
 
-          circle.setAttribute('cx', String(pt.x));
-          circle.setAttribute('cy', String(pt.y));
-          trail.setAttribute('cx', String(tpt.x));
-          trail.setAttribute('cy', String(tpt.y));
+            const pt = path.getPointAtLength(eased * totalLength);
+            const trailEased = Math.max(0, eased - 0.05);
+            const tpt = path.getPointAtLength(trailEased * totalLength);
 
-          // Fade in/out
-          const alpha = progress < 0.1
-            ? progress / 0.1
-            : progress > 0.88
-              ? (1 - progress) / 0.12
-              : 1;
-          circle.style.opacity = String(alpha);
-          trail.style.opacity = String(alpha * 0.45);
+            circle.setAttribute('cx', String(pt.x));
+            circle.setAttribute('cy', String(pt.y));
+            trail.setAttribute('cx', String(tpt.x));
+            trail.setAttribute('cy', String(tpt.y));
 
-          if (progress < 1 && activeRef.current) {
-            const rafId = requestAnimationFrame(step);
-            animFrames.current.push(rafId);
-          } else {
-            circle.style.display = 'none';
-            trail.style.display = 'none';
-          }
+            const alpha = progress < 0.1
+              ? progress / 0.1
+              : progress > 0.88
+                ? (1 - progress) / 0.12
+                : 1;
+            circle.style.opacity = String(alpha);
+            trail.style.opacity = String(alpha * 0.45);
+
+            // No activeRef check — always run to completion
+            if (progress < 1) {
+              const rafId = requestAnimationFrame(step);
+              rafIds.current.push(rafId);
+            } else {
+              circle.style.display = 'none';
+              trail.style.display = 'none';
+            }
+          };
+
+          const rafId = requestAnimationFrame(step);
+          rafIds.current.push(rafId);
         };
 
-        const rafId = requestAnimationFrame(step);
-        animFrames.current.push(rafId);
-      };
+        const tid = setTimeout(runParticle, config.delay);
+        timeoutIds.current.push(tid);
+      });
 
-      // Stagger launch
-      const timerId = window.setTimeout(runParticle, config.delay);
-      animFrames.current.push(timerId as unknown as number);
-    });
+      // Return particles (orange, target→source)
+      const returnDuration = 600;
+      RETURN_PARTICLES.forEach((config, idx) => {
+        const refs = returnParticleRefs.current[idx];
+        if (!refs.circle || !refs.trail) return;
 
-    // Return particles (orange, source←target direction)
-    const returnDuration = 600;
-    RETURN_PARTICLES.forEach((config, idx) => {
-      const refs = returnParticleRefs.current[idx];
-      if (!refs.circle || !refs.trail) return;
+        const runReturnParticle = () => {
+          const circle = refs.circle!;
+          const trail = refs.trail!;
+          if (!circle || !trail) return;
+          circle.style.display = 'block';
+          trail.style.display = 'block';
+          let startTime: number | null = null;
 
-      let startTime: number | null = null;
+          const step = (ts: number) => {
+            if (!startTime) startTime = ts;
+            const elapsed = ts - startTime;
+            const progress = Math.min(elapsed / returnDuration, 1);
 
-      const runReturnParticle = () => {
-        const circle = refs.circle!;
-        const trail = refs.trail!;
-        if (!circle || !trail) return;
-        circle.style.display = 'block';
-        trail.style.display = 'block';
-        startTime = null;
+            const eased = progress < 0.5
+              ? 2 * progress * progress
+              : 1 - Math.pow(-2 * progress + 2, 2) / 2;
 
-        const step = (ts: number) => {
-          if (!startTime) startTime = ts;
-          const elapsed = ts - startTime;
-          const progress = Math.min(elapsed / returnDuration, 1);
+            const pt = path.getPointAtLength((1 - eased) * totalLength);
+            const trailEased = Math.max(0, eased - 0.05);
+            const tpt = path.getPointAtLength((1 - trailEased) * totalLength);
 
-          const eased = progress < 0.5
-            ? 2 * progress * progress
-            : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+            circle.setAttribute('cx', String(pt.x));
+            circle.setAttribute('cy', String(pt.y));
+            trail.setAttribute('cx', String(tpt.x));
+            trail.setAttribute('cy', String(tpt.y));
 
-          // Travel in reverse: from target back to source
-          const pt = path.getPointAtLength((1 - eased) * totalLength);
-          const trailEased = Math.max(0, eased - 0.05);
-          const tpt = path.getPointAtLength((1 - trailEased) * totalLength);
+            const alpha = progress < 0.1
+              ? progress / 0.1
+              : progress > 0.88
+                ? (1 - progress) / 0.12
+                : 1;
+            circle.style.opacity = String(alpha * 0.85);
+            trail.style.opacity = String(alpha * 0.35);
 
-          circle.setAttribute('cx', String(pt.x));
-          circle.setAttribute('cy', String(pt.y));
-          trail.setAttribute('cx', String(tpt.x));
-          trail.setAttribute('cy', String(tpt.y));
+            // No activeRef check — always run to completion
+            if (progress < 1) {
+              const rafId = requestAnimationFrame(step);
+              rafIds.current.push(rafId);
+            } else {
+              circle.style.display = 'none';
+              trail.style.display = 'none';
+            }
+          };
 
-          const alpha = progress < 0.1
-            ? progress / 0.1
-            : progress > 0.88
-              ? (1 - progress) / 0.12
-              : 1;
-          circle.style.opacity = String(alpha * 0.85);
-          trail.style.opacity = String(alpha * 0.35);
-
-          if (progress < 1 && activeRef.current) {
-            const rafId = requestAnimationFrame(step);
-            animFrames.current.push(rafId);
-          } else {
-            circle.style.display = 'none';
-            trail.style.display = 'none';
-          }
+          const rafId = requestAnimationFrame(step);
+          rafIds.current.push(rafId);
         };
 
-        const rafId = requestAnimationFrame(step);
-        animFrames.current.push(rafId);
-      };
+        const tid = setTimeout(runReturnParticle, config.delay);
+        timeoutIds.current.push(tid);
+      });
+    } else {
+      // active=false: cancel only pending timeout launches
+      // Let any in-flight RAF chains complete naturally (no visual mid-path stop)
+      cancelPendingLaunches();
+    }
 
-      const timerId = window.setTimeout(runReturnParticle, config.delay);
-      animFrames.current.push(timerId as unknown as number);
-    });
-
+    // Unmount cleanup
     return () => {
-      animFrames.current.forEach(id => {
-        cancelAnimationFrame(id);
-        clearTimeout(id);
-      });
-      animFrames.current = [];
-      particleRefs.current.forEach(r => {
-        if (r.circle) r.circle.style.display = 'none';
-        if (r.trail) r.trail.style.display = 'none';
-      });
-      returnParticleRefs.current.forEach(r => {
-        if (r.circle) r.circle.style.display = 'none';
-        if (r.trail) r.trail.style.display = 'none';
-      });
+      cancelAll();
+      hideAll();
     };
-  }, [active]);
+  }, [active]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
@@ -253,14 +257,12 @@ function AnimatedEdge({
       {/* Particles + trails (cyan, source→target) */}
       {PARTICLES.map((config, idx) => (
         <g key={`fwd-${idx}`}>
-          {/* Trail */}
           <circle
             ref={el => { if (particleRefs.current[idx]) particleRefs.current[idx].trail = el; }}
             r={config.size * 0.6}
             fill={config.trailColor}
             style={{ display: 'none', filter: `blur(1px)` }}
           />
-          {/* Main particle */}
           <circle
             ref={el => { if (particleRefs.current[idx]) particleRefs.current[idx].circle = el; }}
             r={config.size}

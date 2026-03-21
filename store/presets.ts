@@ -167,6 +167,17 @@ export const TEMPLATE_INFO: TemplateInfo[] = [
     scalingNotes: 'Use dedicated game servers per match. Redis for sub-ms state reads. Async anti-cheat processing. Shard leaderboard by game mode.',
     premium: true,
   },
+  {
+    id: 'college-demo',
+    name: 'College Demo',
+    description: 'Simple 8-node web stack with intentionally low capacities. Runs healthy at 3 req/s, stressed at 6, overloaded at 10+. Built for classroom demonstrations of load, bottlenecks, and cascading failure.',
+    icon: '🎓',
+    category: 'Web Platform',
+    nodeCount: 8,
+    tags: ['demo', 'classroom', 'beginner', 'bottleneck', 'low-capacity'],
+    bottlenecks: ['PostgreSQL DB (cap: 3/s)', 'App Servers (cap: 5/s each)'],
+    scalingNotes: 'Demo flow: 3 req/s = healthy green. 6 req/s = stressed. 10+ req/s = DB overloads → cascading failure. Add a cache node live to fix it!',
+  },
 ];
 
 // ─── Template 1: E-Commerce Platform ────────────────────────────────────────
@@ -626,19 +637,47 @@ const gamingBackend = (() => {
   return { nodes, edges };
 })();
 
+// ─── Template: College Demo ──────────────────────────────────────────────────
+
+const collegeDemo = (() => {
+  const nodes: Node<NodeData>[] = [
+    pn('cd-user',  'user',         'Web Users',      { x: 60,   y: 280 }),
+    pn('cd-gw',    'api-gateway',  'API Gateway',    { x: 320,  y: 280 }, { processing_time: 10, max_capacity: 12 }),
+    pn('cd-lb',    'load-balancer','Load Balancer',  { x: 580,  y: 280 }, { processing_time: 5,  max_capacity: 10 }),
+    pn('cd-app1',  'backend',      'App Server A',   { x: 840,  y: 140 }, { processing_time: 40, max_capacity: 5, failure_rate: 2 }),
+    pn('cd-app2',  'backend',      'App Server B',   { x: 840,  y: 420 }, { processing_time: 40, max_capacity: 5, failure_rate: 2 }),
+    pn('cd-cache', 'redis',        'Redis Cache',    { x: 1100, y: 140 }, { processing_time: 5,  max_capacity: 25, cache_hit_rate: 60 }),
+    pn('cd-db',    'postgresql',   'PostgreSQL DB',  { x: 1100, y: 420 }, { processing_time: 120, max_capacity: 3, failure_rate: 1 }),
+    pn('cd-mon',   'prometheus',   'Monitoring',     { x: 580,  y: 500 }),
+  ];
+  const edges: Edge[] = [
+    pe('cd-e1', 'cd-user',  'cd-gw'),
+    pe('cd-e2', 'cd-gw',   'cd-lb'),
+    pe('cd-e3', 'cd-lb',   'cd-app1'),
+    pe('cd-e4', 'cd-lb',   'cd-app2'),
+    pe('cd-e5', 'cd-app1', 'cd-cache'),
+    pe('cd-e6', 'cd-app2', 'cd-cache'),
+    pe('cd-e7', 'cd-app1', 'cd-db'),
+    pe('cd-e8', 'cd-app2', 'cd-db'),
+    pe('cd-e9', 'cd-mon',  'cd-db'),
+  ];
+  return { nodes, edges };
+})();
+
 // ─── Exports ────────────────────────────────────────────────────────────────
 
 export const ADVANCED_PRESETS: Record<string, { nodes: Node<NodeData>[]; edges: Edge[] }> = {
-  ecommerce:      ecommerce,
-  'social-media': socialMedia,
+  ecommerce:        ecommerce,
+  'social-media':   socialMedia,
   'video-streaming': videoStreaming,
-  'realtime-chat': realtimeChat,
-  fintech:        fintech,
-  'ride-sharing': rideSharing,
-  'saas-platform': saasPlatform,
-  'iot-pipeline': iotPipeline,
-  'search-engine': searchEngine,
+  'realtime-chat':  realtimeChat,
+  fintech:          fintech,
+  'ride-sharing':   rideSharing,
+  'saas-platform':  saasPlatform,
+  'iot-pipeline':   iotPipeline,
+  'search-engine':  searchEngine,
   'gaming-backend': gamingBackend,
+  'college-demo':   collegeDemo,
 };
 
 export type AdvancedPresetId = keyof typeof ADVANCED_PRESETS;

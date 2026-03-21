@@ -92,6 +92,18 @@ export class SimulationEngine {
   private circuitState: Map<string, CircuitState> = new Map();
   private BATCH_THRESHOLD = 1000;
 
+  // Batched node update flushing — prevents per-request setState storms
+  private pendingNodeUpdates: Map<string, { status: NodeData['status']; currentLoad: number; queue_size: number; dropped_requests: number }> = new Map();
+  private nodeFlushInterval: ReturnType<typeof setInterval> | null = null;
+
+  // Per-edge animation throttle — one emit per edge per 200ms max
+  private edgeAnimLastEmit: Map<string, number> = new Map();
+  private readonly EDGE_ANIM_THROTTLE_MS = 80;
+
+  // Throttle request log emits — log updates at most every 150ms regardless of req/s
+  private requestLogLastEmit = 0;
+  private readonly REQUEST_LOG_THROTTLE_MS = 150;
+
   updateGraph(nodes: Node<NodeData>[], edges: Edge[]) {
     this.nodes.clear();
     this.adjacency.clear();
@@ -131,15 +143,19 @@ export class SimulationEngine {
     this.paused = false;
     this.startTime = Date.now();
     this.patternPhase = 0;
+    // Discard any stale updates left by post-stop in-flight callbacks from the previous run
+    this.pendingNodeUpdates.clear();
     this.restartRequestInterval();
     this.startMetrics();
     this.startPatternEngine();
+    this.startNodeFlush();
   }
 
   pause() {
     this.paused = true;
     this.stopRequestInterval();
     this.stopPatternEngine();
+    this.stopNodeFlush();
   }
 
   resume() {
@@ -147,6 +163,7 @@ export class SimulationEngine {
     this.paused = false;
     this.restartRequestInterval();
     this.startPatternEngine();
+    this.startNodeFlush();
   }
 
   stop() {
@@ -155,6 +172,10 @@ export class SimulationEngine {
     this.stopRequestInterval();
     this.stopMetrics();
     this.stopPatternEngine();
+
+    this.stopNodeFlush();
+    this.pendingNodeUpdates.clear();
+    this.edgeAnimLastEmit.clear();
 
     this.activeRequests.clear();
     this.completedRequests = [];
@@ -221,6 +242,77 @@ export class SimulationEngine {
     if (this.patternInterval) { clearInterval(this.patternInterval); this.patternInterval = null; }
   }
 
+  private startNodeFlush() {
+    this.stopNodeFlush();
+    this.nodeFlushInterval = setInterval(() => this.flushNodeUpdates(), 120);
+  }
+
+  private stopNodeFlush() {
+    if (this.nodeFlushInterval) { clearInterval(this.nodeFlushInterval); this.nodeFlushInterval = null; }
+  }
+
+  // Queue a node update keeping the PEAK (highest) load seen during the flush window.
+  // This prevents the race where a fast request increments then decrements before the
+  // flush fires — the node would appear permanently idle even while processing.
+  private queueNodeUpdate(
+    nodeId: string,
+    status: NodeData['status'],
+    currentLoad: number,
+    queue_size: number,
+    dropped_requests: number,
+  ) {
+    const existing = this.pendingNodeUpdates.get(nodeId);
+    if (!existing || currentLoad > existing.currentLoad) {
+      this.pendingNodeUpdates.set(nodeId, { status, currentLoad, queue_size, dropped_requests });
+    }
+  }
+
+  private flushNodeUpdates() {
+    if (this.pendingNodeUpdates.size === 0) return;
+    // Emit peak-load states collected since last flush
+    for (const [nodeId, data] of this.pendingNodeUpdates) {
+      this.emit({ type: 'node_status_changed', nodeId, data });
+    }
+    this.pendingNodeUpdates.clear();
+    // Immediately requeue the ACTUAL current load for every node so the next flush
+    // corrects any "peak overestimates" back to real values (idle nodes return to idle).
+    for (const [nodeId, node] of this.nodes) {
+      const load = this.nodeLoad.get(nodeId) || 0;
+      const util = node.data.max_capacity > 0 ? load / node.data.max_capacity : 0;
+      const status: NodeData['status'] =
+        load === 0 ? 'idle' :
+        util >= 1.0 ? 'overloaded' :
+        util >= 0.7 ? 'stressed' : 'healthy';
+      this.pendingNodeUpdates.set(nodeId, {
+        status, currentLoad: load,
+        queue_size: this.nodeQueueSize.get(nodeId) || 0,
+        dropped_requests: this.nodeDropped.get(nodeId) || 0,
+      });
+    }
+  }
+
+  // Adaptive throttle: at low req/s every packet must be visible;
+  // at high req/s we suppress to avoid React setState storms.
+  private getEdgeThrottleMs(): number {
+    if (this.trafficRate < 30)   return 0;    // always show at low rates
+    if (this.trafficRate < 150)  return 60;
+    if (this.trafficRate < 600)  return 120;
+    return 250;
+  }
+
+  private emitEdgeAnimated(edgeId: string, requestId: string) {
+    const throttle = this.getEdgeThrottleMs();
+    if (throttle === 0) {
+      this.emit({ type: 'edge_animated', edgeId, requestId });
+      return;
+    }
+    const now = Date.now();
+    if ((now - (this.edgeAnimLastEmit.get(edgeId) || 0)) >= throttle) {
+      this.edgeAnimLastEmit.set(edgeId, now);
+      this.emit({ type: 'edge_animated', edgeId, requestId });
+    }
+  }
+
   private updatePattern() {
     this.patternPhase += 0.1;
     const base = this.baseTrafficRate;
@@ -243,7 +335,9 @@ export class SimulationEngine {
       }
     }
     const clamped = Math.max(1, Math.min(1000000, rate));
-    if (Math.abs(clamped - this.trafficRate) > 0.5) {
+    // Only restart the interval when rate changes by at least 5% — prevents
+    // constant interval teardown/recreation that causes burst-then-gap behaviour
+    if (Math.abs(clamped - this.trafficRate) > Math.max(1, this.trafficRate * 0.05)) {
       this.trafficRate = clamped;
       this.restartRequestInterval();
     }
@@ -301,7 +395,7 @@ export class SimulationEngine {
   }
 
   private processRequestAtNode(req: SimRequest) {
-    if (req.completed || req.failed) return;
+    if (!this.running || req.completed || req.failed) return;
     const nodeId = req.path[req.currentNodeIndex];
     const node = this.nodes.get(nodeId);
     if (!node) { this.completeRequest(req); return; }
@@ -373,7 +467,7 @@ export class SimulationEngine {
         const edge = this.edges.find(e => e.source === nodeId && e.target === nextNodeId);
         if (edge) {
           this.incrementEdgeLoad(edge.id);
-          this.emit({ type: 'edge_animated', edgeId: edge.id, requestId: req.id });
+          this.emitEdgeAnimated(edge.id, req.id);
         }
         this.processRequestAtNode(req);
         return;
@@ -395,6 +489,7 @@ export class SimulationEngine {
     if (QUEUE_TYPE_IDS.has(nodeType)) {
       const queueLatency = data.processing_time || 80;
       setTimeout(() => {
+        if (!this.running) return;
         this.decrementLoad(nodeId);
         this.updateNodeStatus(nodeId);
         req.totalLatency += queueLatency;
@@ -408,7 +503,7 @@ export class SimulationEngine {
         const edge = this.edges.find(e => e.source === nodeId && e.target === nextNodeId);
         if (edge) {
           this.incrementEdgeLoad(edge.id);
-          this.emit({ type: 'edge_animated', edgeId: edge.id, requestId: req.id });
+          this.emitEdgeAnimated(edge.id, req.id);
         }
         this.processRequestAtNode(req);
       }, queueLatency);
@@ -416,7 +511,7 @@ export class SimulationEngine {
       const status: NodeData['status'] =
         utilization >= 1.0 ? 'overloaded' :
         utilization >= 0.7 ? 'stressed' : 'healthy';
-      this.emit({ type: 'node_status_changed', nodeId, data: { status, currentLoad: load, queue_size: this.nodeQueueSize.get(nodeId) || 0, dropped_requests: this.nodeDropped.get(nodeId) || 0 } });
+      this.queueNodeUpdate(nodeId, status, load, this.nodeQueueSize.get(nodeId) || 0, this.nodeDropped.get(nodeId) || 0);
       return;
     }
 
@@ -447,7 +542,7 @@ export class SimulationEngine {
       utilization >= 1.0 ? 'overloaded' :
       utilization >= 0.7 ? 'stressed' : 'healthy';
 
-    this.emit({ type: 'node_status_changed', nodeId, data: { status, currentLoad: load, queue_size: queueSize, dropped_requests: this.nodeDropped.get(nodeId) || 0 } });
+    this.queueNodeUpdate(nodeId, status, load, queueSize, this.nodeDropped.get(nodeId) || 0);
     this.updateNodeMetric(nodeId, 'load', load);
 
     // Legacy capacity overflow check (very high overload)
@@ -475,6 +570,7 @@ export class SimulationEngine {
     // Timeout check
     if (effectiveLatency > timeoutMs) {
       setTimeout(() => {
+        if (!this.running) return;
         this.decrementLoad(nodeId);
         this.updateNodeStatus(nodeId);
         // Update circuit breaker on timeout failure
@@ -487,6 +583,7 @@ export class SimulationEngine {
     }
 
     setTimeout(() => {
+      if (!this.running) return;
       this.decrementLoad(nodeId);
       // Drain queue on completion
       const qs = this.nodeQueueSize.get(nodeId) || 0;
@@ -525,7 +622,7 @@ export class SimulationEngine {
       const edge = this.edges.find(e => e.source === nodeId && e.target === nextNodeId);
       if (edge) {
         this.incrementEdgeLoad(edge.id);
-        this.emit({ type: 'edge_animated', edgeId: edge.id, requestId: req.id });
+        this.emitEdgeAnimated(edge.id, req.id);
       }
       this.processRequestAtNode(req);
     }, effectiveLatency);
@@ -562,7 +659,7 @@ export class SimulationEngine {
   }
 
   private processResponseRequest(req: SimRequest) {
-    if (req.completed || req.failed) return;
+    if (!this.running || req.completed || req.failed) return;
     const nodeId = req.path[req.currentNodeIndex];
     const node = this.nodes.get(nodeId);
     if (!node) {
@@ -579,9 +676,12 @@ export class SimulationEngine {
 
     const load = (this.nodeLoad.get(nodeId) || 0) + 1;
     this.nodeLoad.set(nodeId, load);
+    this.updateNodeStatus(nodeId);
 
     setTimeout(() => {
+      if (!this.running) return;
       this.decrementLoad(nodeId);
+      this.updateNodeStatus(nodeId);
       req.totalLatency += responseLatency;
 
       // Animate edge
@@ -601,7 +701,7 @@ export class SimulationEngine {
       );
       if (edge) {
         this.incrementEdgeLoad(edge.id);
-        this.emit({ type: 'edge_animated', edgeId: edge.id, requestId: req.id });
+        this.emitEdgeAnimated(edge.id, req.id);
       }
       this.processResponseRequest(req);
     }, Math.max(1, responseLatency));
@@ -626,7 +726,7 @@ export class SimulationEngine {
       util >= 0.7 ? 'stressed' : 'healthy';
     const queueSize = this.nodeQueueSize.get(nodeId) || 0;
     const dropped = this.nodeDropped.get(nodeId) || 0;
-    this.emit({ type: 'node_status_changed', nodeId, data: { status, currentLoad: load, queue_size: queueSize, dropped_requests: dropped } });
+    this.queueNodeUpdate(nodeId, status, load, queueSize, dropped);
   }
 
   private updateNodeMetric(nodeId: string, type: 'load' | 'latency', value: number) {
@@ -689,7 +789,12 @@ export class SimulationEngine {
       failReason: req.failReason,
     };
     this.requestLog = [entry, ...this.requestLog].slice(0, 200);
-    this.emit({ type: 'request_moved', requestId: req.id, data: { log: entry } });
+    // Throttle UI log updates — no more than once per 150ms to avoid setState storms
+    const now = Date.now();
+    if (now - this.requestLogLastEmit >= this.REQUEST_LOG_THROTTLE_MS) {
+      this.requestLogLastEmit = now;
+      this.emit({ type: 'request_moved', requestId: req.id, data: { log: entry } });
+    }
   }
 
   private computePercentiles(): LatencyPercentiles {
