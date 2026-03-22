@@ -5,7 +5,7 @@ import ReactFlow, {
   Background, BackgroundVariant, Controls, MiniMap,
   NodeTypes, EdgeTypes, Panel,
   ReactFlowProvider, useReactFlow,
-  Node, Edge,
+  Node, Edge, ConnectionLineType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useStore } from '@/store/useStore';
@@ -619,7 +619,7 @@ function FlowCanvasInner() {
           deleteKeyCode="Delete"
           multiSelectionKeyCode="Shift"
           connectionLineStyle={{ stroke: '#00d4ff', strokeWidth: 2, strokeDasharray: '4 3' }}
-          connectionLineType="bezier"
+          connectionLineType={ConnectionLineType.Bezier}
         >
           <Background
             variant={BackgroundVariant.Dots}

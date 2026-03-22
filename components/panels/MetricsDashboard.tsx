@@ -232,7 +232,7 @@ export default function MetricsDashboard() {
             <CartesianGrid stroke="#141e2e" strokeDasharray="3 3" />
             <XAxis dataKey="time" tick={AXIS_TICK} />
             <YAxis tick={AXIS_TICK} />
-            <Tooltip contentStyle={TT_STYLE} formatter={(v: number) => [v, 'Active']} labelStyle={{ color: '#8fa3b8', fontFamily: 'monospace' }} />
+            <Tooltip contentStyle={TT_STYLE} formatter={(v) => [v, 'Active']} labelStyle={{ color: '#8fa3b8', fontFamily: 'monospace' }} />
             <Area type="monotone" dataKey="activeRequests" stroke="#f59e0b" strokeWidth={2} fill="url(#activeGrad)" dot={false} isAnimationActive={false} />
           </AreaChart>
         </ResponsiveContainer>

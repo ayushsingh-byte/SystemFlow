@@ -303,15 +303,11 @@ function NodeItem({ cfg, hovered, onHover, onDragStart, isPremium }: {
   };
 
   return (
-    <motion.div
+    <div
       draggable
       onDragStart={handleDragStart}
       onMouseEnter={() => onHover(cfg.id)}
       onMouseLeave={() => onHover(null)}
-      animate={{
-        background: hovered ? '#0d1520' : 'transparent',
-        scale: hovered ? 1.015 : 1,
-      }}
       style={{
         display: 'flex', alignItems: 'center', gap: 10,
         padding: '7px 10px',
@@ -320,7 +316,9 @@ function NodeItem({ cfg, hovered, onHover, onDragStart, isPremium }: {
         cursor: 'grab',
         userSelect: 'none', marginBottom: 1,
         borderLeft: hovered ? `3px solid ${nc.border}` : '3px solid transparent',
-        transition: 'border-color 0.2s',
+        background: hovered ? '#0d1520' : 'transparent',
+        transform: hovered ? 'scale(1.015)' : 'scale(1)',
+        transition: 'border-color 0.2s, background 0.15s, transform 0.15s',
         position: 'relative',
       }}
       title={isLocked ? `${cfg.label} — Premium node. Drop on canvas to unlock.` : cfg.description}
@@ -372,6 +370,6 @@ function NodeItem({ cfg, hovered, onHover, onDragStart, isPremium }: {
           </span>
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }

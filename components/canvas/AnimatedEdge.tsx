@@ -15,6 +15,9 @@ const RETURN_PARTICLES = [
   { delay: 310, size: 2.0, color: '#fb923c', trailColor: '#f97316', glow: '#f97316' },
 ];
 
+// Gap between burst loops (ms)
+const BURST_GAP_MS = 80;
+
 interface ParticleRefs {
   circle: SVGCircleElement | null;
   trail: SVGCircleElement | null;
@@ -43,9 +46,10 @@ function AnimatedEdge({
     RETURN_PARTICLES.map(() => ({ circle: null, trail: null }))
   );
 
-  // Separate tracking for timeouts (pending launches) and RAF IDs (in-flight animations)
   const timeoutIds = useRef<ReturnType<typeof setTimeout>[]>([]);
   const rafIds = useRef<number[]>([]);
+  // Tracks whether the burst loop should keep running
+  const activeRef = useRef(false);
 
   const hideAll = () => {
     particleRefs.current.forEach(r => {
@@ -68,143 +72,163 @@ function AnimatedEdge({
   const cancelPendingLaunches = () => {
     timeoutIds.current.forEach(clearTimeout);
     timeoutIds.current = [];
-    // Do NOT cancel rafIds — let in-flight particles complete naturally
+  };
+
+  // Launches one burst of all particles. When the last particle finishes,
+  // schedules another burst if activeRef is still true — creating a continuous loop.
+  const launchBurst = () => {
+    if (!pathRef.current || !activeRef.current) return;
+
+    const path = pathRef.current;
+    const totalLength = path.getTotalLength();
+
+    const totalParticles = PARTICLES.length + RETURN_PARTICLES.length;
+    let completedCount = 0;
+
+    const onParticleComplete = () => {
+      completedCount++;
+      if (completedCount === totalParticles) {
+        // All particles finished — loop if still active
+        if (activeRef.current) {
+          const tid = setTimeout(launchBurst, BURST_GAP_MS);
+          timeoutIds.current.push(tid);
+        }
+      }
+    };
+
+    // Forward particles (cyan, source→target)
+    PARTICLES.forEach((config, idx) => {
+      const refs = particleRefs.current[idx];
+      if (!refs.circle || !refs.trail) { onParticleComplete(); return; }
+
+      const duration = 420;
+
+      const runParticle = () => {
+        if (!activeRef.current) { onParticleComplete(); return; }
+        const circle = refs.circle!;
+        const trail = refs.trail!;
+        circle.style.display = 'block';
+        trail.style.display = 'block';
+        let startTime: number | null = null;
+
+        const step = (ts: number) => {
+          if (!startTime) startTime = ts;
+          const elapsed = ts - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+
+          const eased = progress < 0.5
+            ? 2 * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+          const pt = path.getPointAtLength(eased * totalLength);
+          const trailEased = Math.max(0, eased - 0.05);
+          const tpt = path.getPointAtLength(trailEased * totalLength);
+
+          circle.setAttribute('cx', String(pt.x));
+          circle.setAttribute('cy', String(pt.y));
+          trail.setAttribute('cx', String(tpt.x));
+          trail.setAttribute('cy', String(tpt.y));
+
+          const alpha = progress < 0.1
+            ? progress / 0.1
+            : progress > 0.88
+              ? (1 - progress) / 0.12
+              : 1;
+          circle.style.opacity = String(alpha);
+          trail.style.opacity = String(alpha * 0.45);
+
+          if (progress < 1) {
+            const rafId = requestAnimationFrame(step);
+            rafIds.current.push(rafId);
+          } else {
+            circle.style.display = 'none';
+            trail.style.display = 'none';
+            onParticleComplete();
+          }
+        };
+
+        const rafId = requestAnimationFrame(step);
+        rafIds.current.push(rafId);
+      };
+
+      const tid = setTimeout(runParticle, config.delay);
+      timeoutIds.current.push(tid);
+    });
+
+    // Return particles (orange, target→source)
+    const returnDuration = 600;
+    RETURN_PARTICLES.forEach((config, idx) => {
+      const refs = returnParticleRefs.current[idx];
+      if (!refs.circle || !refs.trail) { onParticleComplete(); return; }
+
+      const runReturnParticle = () => {
+        if (!activeRef.current) { onParticleComplete(); return; }
+        const circle = refs.circle!;
+        const trail = refs.trail!;
+        circle.style.display = 'block';
+        trail.style.display = 'block';
+        let startTime: number | null = null;
+
+        const step = (ts: number) => {
+          if (!startTime) startTime = ts;
+          const elapsed = ts - startTime;
+          const progress = Math.min(elapsed / returnDuration, 1);
+
+          const eased = progress < 0.5
+            ? 2 * progress * progress
+            : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+          const pt = path.getPointAtLength((1 - eased) * totalLength);
+          const trailEased = Math.max(0, eased - 0.05);
+          const tpt = path.getPointAtLength((1 - trailEased) * totalLength);
+
+          circle.setAttribute('cx', String(pt.x));
+          circle.setAttribute('cy', String(pt.y));
+          trail.setAttribute('cx', String(tpt.x));
+          trail.setAttribute('cy', String(tpt.y));
+
+          const alpha = progress < 0.1
+            ? progress / 0.1
+            : progress > 0.88
+              ? (1 - progress) / 0.12
+              : 1;
+          circle.style.opacity = String(alpha * 0.85);
+          trail.style.opacity = String(alpha * 0.35);
+
+          if (progress < 1) {
+            const rafId = requestAnimationFrame(step);
+            rafIds.current.push(rafId);
+          } else {
+            circle.style.display = 'none';
+            trail.style.display = 'none';
+            onParticleComplete();
+          }
+        };
+
+        const rafId = requestAnimationFrame(step);
+        rafIds.current.push(rafId);
+      };
+
+      const tid = setTimeout(runReturnParticle, config.delay);
+      timeoutIds.current.push(tid);
+    });
   };
 
   useEffect(() => {
+    activeRef.current = active;
+
     if (active) {
-      // Fresh start: cancel everything and relaunch
+      // Fresh start: cancel everything and begin continuous burst loop
       cancelAll();
       hideAll();
-
-      if (!pathRef.current) return;
-      const path = pathRef.current;
-      const totalLength = path.getTotalLength();
-
-      // Forward particles (cyan, source→target)
-      PARTICLES.forEach((config, idx) => {
-        const refs = particleRefs.current[idx];
-        if (!refs.circle || !refs.trail) return;
-
-        const duration = 420;
-
-        const runParticle = () => {
-          const circle = refs.circle!;
-          const trail = refs.trail!;
-          if (!circle || !trail) return;
-          circle.style.display = 'block';
-          trail.style.display = 'block';
-          let startTime: number | null = null;
-
-          const step = (ts: number) => {
-            if (!startTime) startTime = ts;
-            const elapsed = ts - startTime;
-            const progress = Math.min(elapsed / duration, 1);
-
-            const eased = progress < 0.5
-              ? 2 * progress * progress
-              : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-
-            const pt = path.getPointAtLength(eased * totalLength);
-            const trailEased = Math.max(0, eased - 0.05);
-            const tpt = path.getPointAtLength(trailEased * totalLength);
-
-            circle.setAttribute('cx', String(pt.x));
-            circle.setAttribute('cy', String(pt.y));
-            trail.setAttribute('cx', String(tpt.x));
-            trail.setAttribute('cy', String(tpt.y));
-
-            const alpha = progress < 0.1
-              ? progress / 0.1
-              : progress > 0.88
-                ? (1 - progress) / 0.12
-                : 1;
-            circle.style.opacity = String(alpha);
-            trail.style.opacity = String(alpha * 0.45);
-
-            // No activeRef check — always run to completion
-            if (progress < 1) {
-              const rafId = requestAnimationFrame(step);
-              rafIds.current.push(rafId);
-            } else {
-              circle.style.display = 'none';
-              trail.style.display = 'none';
-            }
-          };
-
-          const rafId = requestAnimationFrame(step);
-          rafIds.current.push(rafId);
-        };
-
-        const tid = setTimeout(runParticle, config.delay);
-        timeoutIds.current.push(tid);
-      });
-
-      // Return particles (orange, target→source)
-      const returnDuration = 600;
-      RETURN_PARTICLES.forEach((config, idx) => {
-        const refs = returnParticleRefs.current[idx];
-        if (!refs.circle || !refs.trail) return;
-
-        const runReturnParticle = () => {
-          const circle = refs.circle!;
-          const trail = refs.trail!;
-          if (!circle || !trail) return;
-          circle.style.display = 'block';
-          trail.style.display = 'block';
-          let startTime: number | null = null;
-
-          const step = (ts: number) => {
-            if (!startTime) startTime = ts;
-            const elapsed = ts - startTime;
-            const progress = Math.min(elapsed / returnDuration, 1);
-
-            const eased = progress < 0.5
-              ? 2 * progress * progress
-              : 1 - Math.pow(-2 * progress + 2, 2) / 2;
-
-            const pt = path.getPointAtLength((1 - eased) * totalLength);
-            const trailEased = Math.max(0, eased - 0.05);
-            const tpt = path.getPointAtLength((1 - trailEased) * totalLength);
-
-            circle.setAttribute('cx', String(pt.x));
-            circle.setAttribute('cy', String(pt.y));
-            trail.setAttribute('cx', String(tpt.x));
-            trail.setAttribute('cy', String(tpt.y));
-
-            const alpha = progress < 0.1
-              ? progress / 0.1
-              : progress > 0.88
-                ? (1 - progress) / 0.12
-                : 1;
-            circle.style.opacity = String(alpha * 0.85);
-            trail.style.opacity = String(alpha * 0.35);
-
-            // No activeRef check — always run to completion
-            if (progress < 1) {
-              const rafId = requestAnimationFrame(step);
-              rafIds.current.push(rafId);
-            } else {
-              circle.style.display = 'none';
-              trail.style.display = 'none';
-            }
-          };
-
-          const rafId = requestAnimationFrame(step);
-          rafIds.current.push(rafId);
-        };
-
-        const tid = setTimeout(runReturnParticle, config.delay);
-        timeoutIds.current.push(tid);
-      });
+      launchBurst();
     } else {
-      // active=false: cancel only pending timeout launches
-      // Let any in-flight RAF chains complete naturally (no visual mid-path stop)
+      // Stop launching new bursts; let any in-flight RAF particles finish naturally
       cancelPendingLaunches();
     }
 
-    // Unmount cleanup
     return () => {
+      activeRef.current = false;
       cancelAll();
       hideAll();
     };

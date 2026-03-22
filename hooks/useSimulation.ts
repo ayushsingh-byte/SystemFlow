@@ -79,12 +79,15 @@ export function useSimulation() {
   }, [setMetrics, setNodeStatus, setEdgeAnimation, appendRequestLog, setEdgeLoad]);
 
   const startSimulation = useCallback(() => {
-    simulationEngine.setTrafficRate(simConfig.trafficRate);
-    simulationEngine.setFailureInjection(simConfig.failureInjection);
-    simulationEngine.setTrafficPattern(simConfig.trafficPattern);
+    // Always read fresh config from the store to avoid stale closure bugs
+    // (e.g. when runTest sets a new rate/pattern then calls startSimulation via setTimeout)
+    const { simConfig: currentConfig } = useStore.getState();
+    simulationEngine.setTrafficRate(currentConfig.trafficRate);
+    simulationEngine.setFailureInjection(currentConfig.failureInjection);
+    simulationEngine.setTrafficPattern(currentConfig.trafficPattern);
     simulationEngine.start();
     setSimConfig({ running: true, paused: false });
-  }, [simConfig, setSimConfig]);
+  }, [setSimConfig]);
 
   const pauseSimulation = useCallback(() => {
     simulationEngine.pause();
