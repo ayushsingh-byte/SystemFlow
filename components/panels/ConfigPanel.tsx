@@ -45,18 +45,16 @@ function SliderField({ field, value, onUpdate }: {
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 5 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
         <div>
-          <span style={{ fontSize: 13, color: '#c8d8e8', fontFamily: 'monospace', fontWeight: 600 }}>{field.label}</span>
-          <div style={{ fontSize: 11, color: '#4a5a6a', fontFamily: 'monospace', marginTop: 2 }}>{field.description}</div>
+          <span style={{ fontSize: 13, color: 'var(--text)', fontFamily: 'var(--font-ui)', fontWeight: 600 }}>{field.label}</span>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', marginTop: 2, lineHeight: 1.4 }}>{field.description}</div>
         </div>
         {editing ? (
           <input
             autoFocus
             type="number"
-            min={min}
-            max={max}
-            step={step}
+            min={min} max={max} step={step}
             value={inputVal}
             onChange={e => setInputVal(e.target.value)}
             onBlur={commitEdit}
@@ -65,9 +63,9 @@ function SliderField({ field, value, onUpdate }: {
               if (e.key === 'Escape') setEditing(false);
             }}
             style={{
-              background: '#050810', border: '1px solid #00d4ff',
+              background: 'var(--bg)', border: '1px solid var(--cyan)',
               borderRadius: 6, padding: '3px 8px',
-              fontSize: 13, color: '#00d4ff', fontFamily: 'monospace', fontWeight: 800,
+              fontSize: 13, color: 'var(--cyan)', fontFamily: 'var(--font-mono)', fontWeight: 700,
               width: 80, textAlign: 'center', flexShrink: 0, marginLeft: 8,
               outline: 'none',
             }}
@@ -77,46 +75,39 @@ function SliderField({ field, value, onUpdate }: {
             onClick={startEdit}
             title="Click to type exact value"
             style={{
-              background: '#050810', border: '1px solid #1e2d3d',
+              background: 'var(--bg)', border: '1px solid var(--border2)',
               borderRadius: 6, padding: '3px 10px',
-              fontSize: 14, color: '#00d4ff', fontFamily: 'monospace', fontWeight: 800,
+              fontSize: 14, color: 'var(--cyan)', fontFamily: 'var(--font-mono)', fontWeight: 700,
               minWidth: 56, textAlign: 'center', flexShrink: 0, marginLeft: 8,
-              cursor: 'text',
-              transition: 'border-color 0.15s',
+              cursor: 'text', transition: 'border-color 0.15s',
             }}
-            onMouseEnter={e => (e.currentTarget.style.borderColor = '#00d4ff50')}
-            onMouseLeave={e => (e.currentTarget.style.borderColor = '#1e2d3d')}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(0,212,255,0.4)')}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border2)')}
           >
             {fmt(actual)}{unit}
           </div>
         )}
       </div>
-      <div style={{ position: 'relative', height: 8 }}>
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: '#080d16', borderRadius: 4, border: '1px solid #1e2d3d',
-        }} />
+      <div style={{ position: 'relative', height: 7 }}>
+        <div style={{ position: 'absolute', inset: 0, background: 'var(--surface)', borderRadius: 4, border: '1px solid var(--border)' }} />
         <motion.div
           animate={{ width: `${pct}%` }}
           transition={{ duration: 0.12 }}
           style={{
             position: 'absolute', top: 0, left: 0, height: '100%',
-            background: 'linear-gradient(90deg, #00d4ff, #7b2ff7)',
+            background: 'linear-gradient(90deg, var(--cyan), #818cf8)',
             borderRadius: 4,
           }}
         />
         <input
           type="range" min={min} max={max} step={step} value={actual}
           onChange={(e) => onUpdate(field.key as string, Number(e.target.value))}
-          style={{
-            position: 'absolute', inset: 0, width: '100%',
-            opacity: 0, cursor: 'pointer', height: '100%',
-          }}
+          style={{ position: 'absolute', inset: 0, width: '100%', opacity: 0, cursor: 'pointer', height: '100%' }}
         />
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
-        <span style={{ fontSize: 10, color: '#2a3a4a', fontFamily: 'monospace' }}>{fmt(min)}{unit}</span>
-        <span style={{ fontSize: 10, color: '#2a3a4a', fontFamily: 'monospace' }}>{fmt(max)}{unit}</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
+        <span style={{ fontSize: 10, color: 'var(--text-faint)', fontFamily: 'var(--font-mono)' }}>{fmt(min)}{unit}</span>
+        <span style={{ fontSize: 10, color: 'var(--text-faint)', fontFamily: 'var(--font-mono)' }}>{fmt(max)}{unit}</span>
       </div>
     </div>
   );
@@ -130,10 +121,10 @@ function ToggleField({ field, value, onUpdate }: {
 }) {
   const enabled = value !== false; // default true
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, padding: '8px 10px', background: '#060b12', borderRadius: 8, border: '1px solid #141e2e' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, padding: '9px 11px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
       <div>
-        <div style={{ fontSize: 13, color: '#c8d8e8', fontFamily: 'monospace', fontWeight: 600 }}>{field.label}</div>
-        <div style={{ fontSize: 11, color: '#4a5a6a', fontFamily: 'monospace', marginTop: 2 }}>{field.description}</div>
+        <div style={{ fontSize: 13, color: 'var(--text)', fontFamily: 'var(--font-ui)', fontWeight: 600 }}>{field.label}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', marginTop: 2, lineHeight: 1.4 }}>{field.description}</div>
       </div>
       <button
         onClick={() => onUpdate(field.key as string, !enabled)}
@@ -167,16 +158,16 @@ function SelectField({ field, value, onUpdate }: {
 }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <div style={{ fontSize: 13, color: '#c8d8e8', fontFamily: 'monospace', fontWeight: 600, marginBottom: 4 }}>{field.label}</div>
-      <div style={{ fontSize: 11, color: '#4a5a6a', fontFamily: 'monospace', marginBottom: 6 }}>{field.description}</div>
+      <div style={{ fontSize: 13, color: 'var(--text)', fontFamily: 'var(--font-ui)', fontWeight: 600, marginBottom: 3 }}>{field.label}</div>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', marginBottom: 7, lineHeight: 1.4 }}>{field.description}</div>
       <select
         value={value as string | number}
         onChange={(e) => onUpdate(field.key as string, e.target.value)}
         style={{
-          width: '100%', background: '#080d16',
-          border: '1px solid #1e2d3d', borderRadius: 6,
-          padding: '7px 10px', color: '#e2eaf4',
-          fontSize: 13, fontFamily: 'monospace', outline: 'none',
+          width: '100%', background: 'var(--surface)',
+          border: '1px solid var(--border2)', borderRadius: 6,
+          padding: '8px 10px', color: 'var(--text)',
+          fontSize: 13, fontFamily: 'var(--font-ui)', outline: 'none',
           cursor: 'pointer',
         }}
       >
@@ -196,22 +187,15 @@ function NumberInputField({ field, value, onUpdate }: {
 }) {
   return (
     <div style={{ marginBottom: 14 }}>
-      <div style={{ fontSize: 13, color: '#c8d8e8', fontFamily: 'monospace', fontWeight: 600, marginBottom: 4 }}>{field.label}</div>
-      <div style={{ fontSize: 11, color: '#4a5a6a', fontFamily: 'monospace', marginBottom: 6 }}>{field.description}</div>
+      <div style={{ fontSize: 13, color: 'var(--text)', fontFamily: 'var(--font-ui)', fontWeight: 600, marginBottom: 3 }}>{field.label}</div>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', marginBottom: 7, lineHeight: 1.4 }}>{field.description}</div>
       <input
         type="number"
         value={value ?? 0}
-        min={field.min}
-        max={field.max}
-        step={field.step}
+        min={field.min} max={field.max} step={field.step}
         onChange={(e) => onUpdate(field.key as string, Number(e.target.value))}
-        style={{
-          width: '100%', background: '#080d16',
-          border: '1px solid #1e2d3d', borderRadius: 6,
-          padding: '7px 10px', color: '#e2eaf4',
-          fontSize: 13, fontFamily: 'monospace', outline: 'none',
-          boxSizing: 'border-box',
-        }}
+        className="sf-input"
+        style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}
       />
     </div>
   );
@@ -227,27 +211,27 @@ function SchemaSectionCard({ section, data, upd }: {
 
   return (
     <div style={{
-      background: '#060b12',
-      border: `1px solid #141e2e`,
-      borderLeft: `4px solid ${section.color}`,
-      borderRadius: 10, marginBottom: 12, overflow: 'hidden',
+      background: 'var(--surface2)',
+      border: `1px solid var(--border)`,
+      borderLeft: `3px solid ${section.color}`,
+      borderRadius: 9, marginBottom: 10, overflow: 'hidden',
     }}>
       <button
         onClick={() => setExpanded(!expanded)}
         style={{
           width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-          padding: '10px 14px', background: 'transparent', border: 'none',
+          padding: '9px 13px', background: 'transparent', border: 'none',
           cursor: 'pointer', textAlign: 'left',
         }}
       >
-        <span style={{ fontSize: 14 }}>{section.icon}</span>
+        <span style={{ fontSize: 13 }}>{section.icon}</span>
         <span style={{
-          fontSize: 11, color: section.color, fontFamily: 'monospace',
-          textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, flex: 1,
+          fontSize: 11, color: section.color, fontFamily: 'var(--font-ui)',
+          textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 700, flex: 1,
         }}>
           {section.title}
         </span>
-        <span style={{ fontSize: 10, color: '#374151', fontFamily: 'monospace' }}>
+        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
           {expanded ? '▲' : '▼'}
         </span>
       </button>
@@ -338,10 +322,10 @@ function NodeHeaderCard({ nodeId, data, cfg, upd }: {
 
   return (
     <div style={{
-      background: `linear-gradient(135deg, ${nc.bg}, #050810)`,
-      border: `1px solid ${nc.border}60`,
-      borderRadius: 12, padding: 16, marginBottom: 16,
-      boxShadow: `0 0 24px ${nc.glow}20`,
+      background: `linear-gradient(140deg, ${nc.bg}, var(--bg))`,
+      border: `1px solid ${nc.border}50`,
+      borderRadius: 11, padding: 15, marginBottom: 14,
+      boxShadow: `0 0 20px ${nc.glow}15`,
     }}>
       {/* Top row: emoji + info + online toggle */}
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
@@ -357,18 +341,15 @@ function NodeHeaderCard({ nodeId, data, cfg, upd }: {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' }}>
             <span style={{
-              fontSize: 11, color: nc.text, fontFamily: 'monospace',
-              textTransform: 'uppercase', letterSpacing: '0.06em',
-              background: `${nc.border}18`, padding: '2px 7px', borderRadius: 10,
+              fontSize: 10, color: nc.text, fontFamily: 'var(--font-ui)',
+              textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600,
+              background: `${nc.border}18`, padding: '2px 8px', borderRadius: 10,
             }}>
               {cfg.category}
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <div style={{
-                width: 8, height: 8, borderRadius: '50%', background: statusColor,
-                boxShadow: `0 0 6px ${statusColor}`, flexShrink: 0,
-              }} />
-              <span style={{ fontSize: 11, color: statusColor, fontFamily: 'monospace', textTransform: 'uppercase', fontWeight: 700 }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: statusColor, boxShadow: `0 0 5px ${statusColor}`, flexShrink: 0 }} />
+              <span style={{ fontSize: 10, color: statusColor, fontFamily: 'var(--font-ui)', textTransform: 'uppercase', fontWeight: 700 }}>
                 {data.status}
               </span>
             </div>
@@ -380,14 +361,14 @@ function NodeHeaderCard({ nodeId, data, cfg, upd }: {
             onChange={(e) => upd('label', e.target.value)}
             style={{
               background: 'transparent', border: 'none', outline: 'none',
-              color: '#e2eaf4', fontSize: 17, fontWeight: 700,
-              fontFamily: 'monospace', width: '100%',
-              borderBottom: '1px solid #1e2d3d20', paddingBottom: 2,
+              color: 'var(--text)', fontSize: 16, fontWeight: 700,
+              fontFamily: 'var(--font-ui)', width: '100%',
+              borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 2,
             }}
             onFocus={e => { (e.target as HTMLInputElement).style.borderBottomColor = nc.border; }}
-            onBlur={e => { (e.target as HTMLInputElement).style.borderBottomColor = '#1e2d3d20'; }}
+            onBlur={e => { (e.target as HTMLInputElement).style.borderBottomColor = 'rgba(255,255,255,0.08)'; }}
           />
-          <div style={{ fontSize: 12, color: '#8fa3b8', marginTop: 3, fontFamily: 'monospace' }}>{cfg.tagline}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, fontFamily: 'var(--font-ui)' }}>{cfg.tagline}</div>
         </div>
 
         {/* ONLINE / OFFLINE big toggle */}
@@ -423,26 +404,26 @@ function NodeHeaderCard({ nodeId, data, cfg, upd }: {
       </div>
 
       {/* ID + Load badges */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
         <div style={{
-          background: '#080d16', border: '1px solid #1e2d3d',
+          background: 'var(--bg)', border: '1px solid var(--border)',
           borderRadius: 5, padding: '3px 8px',
-          fontSize: 11, color: '#4a5a6a', fontFamily: 'monospace',
+          fontSize: 10.5, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)',
         }}>
           ID: {nodeId}
         </div>
         <div style={{
-          background: '#080d16', border: '1px solid #1e2d3d',
+          background: 'var(--bg)', border: '1px solid var(--border)',
           borderRadius: 5, padding: '3px 8px',
-          fontSize: 11, color: '#8fa3b8', fontFamily: 'monospace',
+          fontSize: 10.5, color: 'var(--text-sec)', fontFamily: 'var(--font-mono)',
         }}>
-          Load: <span style={{ color: '#e2eaf4', fontWeight: 700 }}>{data.currentLoad}</span>
+          Load: <span style={{ color: 'var(--text)', fontWeight: 700 }}>{data.currentLoad}</span>
         </div>
         {(data.queue_size ?? 0) > 0 && (
           <div style={{
-            background: '#080d16', border: '1px solid #1e2d3d',
+            background: 'var(--bg)', border: '1px solid rgba(245,158,11,0.3)',
             borderRadius: 5, padding: '3px 8px',
-            fontSize: 11, color: '#f59e0b', fontFamily: 'monospace',
+            fontSize: 10.5, color: '#f59e0b', fontFamily: 'var(--font-mono)',
           }}>
             Queue: <span style={{ fontWeight: 700 }}>{data.queue_size}</span>
           </div>
@@ -451,11 +432,11 @@ function NodeHeaderCard({ nodeId, data, cfg, upd }: {
 
       {/* Load bar */}
       <div style={{ marginBottom: 6 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-          <span style={{ fontSize: 10, color: '#4a5a6a', fontFamily: 'monospace' }}>LOAD</span>
-          <span style={{ fontSize: 10, color: '#4a5a6a', fontFamily: 'monospace' }}>{Math.round(loadPct)}%</span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Load</span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{Math.round(loadPct)}%</span>
         </div>
-        <div style={{ height: 5, background: '#0d1117', borderRadius: 3 }}>
+        <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 3 }}>
           <motion.div
             animate={{ width: `${loadPct}%` }}
             transition={{ duration: 0.2 }}
@@ -470,17 +451,17 @@ function NodeHeaderCard({ nodeId, data, cfg, upd }: {
       {/* Queue bar */}
       {(data.queue_limit ?? 0) > 0 && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-            <span style={{ fontSize: 10, color: '#4a5a6a', fontFamily: 'monospace' }}>QUEUE</span>
-            <span style={{ fontSize: 10, color: '#4a5a6a', fontFamily: 'monospace' }}>{data.queue_size ?? 0}/{data.queue_limit}</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-ui)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Queue</span>
+            <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>{data.queue_size ?? 0}/{data.queue_limit}</span>
           </div>
-          <div style={{ height: 5, background: '#0d1117', borderRadius: 3 }}>
+          <div style={{ height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 3 }}>
             <motion.div
               animate={{ width: `${queuePct}%` }}
               transition={{ duration: 0.2 }}
               style={{
                 height: '100%', borderRadius: 3,
-                background: queuePct > 80 ? '#ef4444' : '#ec4899',
+                background: queuePct > 80 ? '#ef4444' : '#818cf8',
               }}
             />
           </div>
@@ -502,16 +483,16 @@ function ActionsCard({ nodeId, deleteNode, duplicateNode, deleteEdgesForNode, re
 
   return (
     <div style={{
-      background: '#060b12', border: '1px solid #141e2e',
-      borderRadius: 10, padding: '14px', marginBottom: 12,
+      background: 'var(--surface2)', border: '1px solid var(--border)',
+      borderRadius: 9, padding: '13px', marginBottom: 12,
     }}>
       <div style={{
-        fontSize: 11, color: '#374151', fontFamily: 'monospace',
-        textTransform: 'uppercase', letterSpacing: '0.09em',
-        marginBottom: 10, borderBottom: '1px solid #141e2e', paddingBottom: 7,
-        borderLeft: '4px solid #636e7b', paddingLeft: 10, fontWeight: 700,
+        fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-ui)',
+        textTransform: 'uppercase', letterSpacing: '0.07em',
+        marginBottom: 10, borderBottom: '1px solid var(--border)', paddingBottom: 8,
+        fontWeight: 700,
       }}>
-        ⚙ Node Actions
+        Node Actions
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
         <ActionBtn label="Duplicate" icon="⧉" color="#3b82f6" onClick={() => duplicateNode(nodeId)} />
@@ -541,22 +522,23 @@ function ActionBtn({ label, icon, color, onClick }: {
     <button
       onClick={onClick}
       style={{
-        height: 36, background: `${color}10`,
-        border: `1px solid ${color}30`, borderRadius: 8,
-        color, fontSize: 12, fontFamily: 'monospace', fontWeight: 600,
+        height: 34, background: `${color}0e`,
+        border: `1px solid ${color}28`, borderRadius: 7,
+        color, fontSize: 12, fontFamily: 'var(--font-ui)', fontWeight: 600,
         cursor: 'pointer', transition: 'all 0.12s',
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
       }}
       onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.background = `${color}20`;
-        (e.currentTarget as HTMLElement).style.borderColor = color;
+        (e.currentTarget as HTMLElement).style.background = `${color}1c`;
+        (e.currentTarget as HTMLElement).style.borderColor = `${color}60`;
       }}
       onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.background = `${color}10`;
-        (e.currentTarget as HTMLElement).style.borderColor = `${color}30`;
+        (e.currentTarget as HTMLElement).style.background = `${color}0e`;
+        (e.currentTarget as HTMLElement).style.borderColor = `${color}28`;
       }}
     >
-      {icon} {label}
+      <span style={{ fontFamily: 'inherit' }}>{icon}</span>
+      {label}
     </button>
   );
 }
@@ -565,33 +547,36 @@ function ActionBtn({ label, icon, color, onClick }: {
 function EmptyState() {
   return (
     <div style={{
-      padding: 32, textAlign: 'center', height: '100%',
+      padding: '40px 20px', textAlign: 'center', height: '100%',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
     }}>
-      <div style={{ fontSize: 56, marginBottom: 16, opacity: 0.15, lineHeight: 1 }}>⬡</div>
-      <div style={{ fontSize: 14, color: '#8fa3b8', fontFamily: 'monospace', lineHeight: 2, marginBottom: 24 }}>
+      <div style={{
+        width: 56, height: 56, borderRadius: 14, marginBottom: 18,
+        background: 'var(--surface2)', border: '1px solid var(--border)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        opacity: 0.5,
+      }}>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L21.5 7.5v9L12 22l-9.5-5.5v-9L12 2z" stroke="var(--text-muted)" strokeWidth="1.5" strokeLinejoin="round"/>
+        </svg>
+      </div>
+      <div style={{ fontSize: 14, color: 'var(--text-sec)', fontFamily: 'var(--font-ui)', lineHeight: 1.7, marginBottom: 24 }}>
         Click any node to<br />configure its properties
       </div>
       <div style={{
-        width: '100%', background: '#080d16', border: '1px solid #141e2e',
-        borderRadius: 10, padding: '16px 18px',
-        fontSize: 12, color: '#4a5a6a', fontFamily: 'monospace',
-        lineHeight: 2.2, textAlign: 'left',
+        width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)',
+        borderRadius: 8, padding: '14px 16px',
+        fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-ui)',
+        lineHeight: 2, textAlign: 'left',
       }}>
-        <div><kbd style={kbdStyle}>Delete</kbd> — remove node</div>
-        <div><kbd style={kbdStyle}>Shift</kbd>+drag — multi-select</div>
-        <div><kbd style={kbdStyle}>Ctrl+Z</kbd> — undo</div>
-        <div>Drag from palette → canvas to add</div>
+        <div><kbd>Delete</kbd> — remove node</div>
+        <div><kbd>Shift</kbd>+drag — multi-select</div>
+        <div><kbd>Ctrl+Z</kbd> — undo</div>
+        <div style={{ marginTop: 2, color: 'var(--text-faint)', fontSize: 11 }}>Drag from palette → canvas to add</div>
       </div>
     </div>
   );
 }
-
-const kbdStyle: React.CSSProperties = {
-  background: '#141e2e', borderRadius: 4, padding: '2px 7px',
-  fontSize: 11, color: '#8fa3b8', fontFamily: 'monospace', marginRight: 5,
-  border: '1px solid #1e2d3d',
-};
 
 // ─── Main ConfigPanel ─────────────────────────────────────────────────────────
 export default function ConfigPanel() {

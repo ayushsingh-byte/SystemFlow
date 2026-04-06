@@ -165,8 +165,8 @@ export default function OnboardingTour() {
             width: current.spotlight.w,
             height: current.spotlight.h,
             borderRadius: 10,
-            boxShadow: '0 0 0 9999px rgba(0,0,0,0.80), 0 0 0 3px #00d4ff, 0 0 30px #00d4ff40',
-            border: '1px solid #00d4ff60',
+            boxShadow: '0 0 0 9999px rgba(0,0,0,0.82), 0 0 0 2px #00d4ff, 0 0 24px rgba(0,212,255,0.3)',
+            border: '1px solid rgba(0,212,255,0.5)',
             pointerEvents: 'none',
             zIndex: 10000,
           }} />
@@ -177,22 +177,23 @@ export default function OnboardingTour() {
       <div style={{
         position: 'absolute',
         ...boxStyle,
-        background: '#07111c',
-        border: '1px solid #1e3a50',
-        borderRadius: 16,
+        background: '#08111e',
+        border: '1px solid var(--border2)',
+        borderRadius: 14,
         padding: '22px 24px',
-        boxShadow: '0 24px 80px #000000a0, 0 0 0 1px #00d4ff15',
+        boxShadow: '0 32px 80px rgba(0,0,0,0.85), 0 0 0 1px rgba(0,212,255,0.08)',
         zIndex: 10001,
       }}>
         {/* Progress bar */}
-        <div style={{ display: 'flex', gap: 3, marginBottom: 18 }}>
+        <div style={{ display: 'flex', gap: 3, marginBottom: 16 }}>
           {TOUR_STEPS.map((_, i) => (
             <div
               key={i}
               onClick={() => setStep(i)}
               style={{
-                height: 3, flex: 1, borderRadius: 2,
-                background: i < step ? '#00d4ff' : i === step ? '#00d4ffcc' : '#1e2d3d',
+                height: 2.5, flex: 1, borderRadius: 2,
+                background: i <= step ? 'var(--cyan)' : 'var(--border2)',
+                opacity: i < step ? 0.5 : 1,
                 transition: 'background 0.3s',
                 cursor: 'pointer',
               }}
@@ -202,24 +203,25 @@ export default function OnboardingTour() {
 
         {/* Step counter */}
         <div style={{
-          fontSize: 10, color: '#4a6a7a', fontFamily: 'monospace',
-          letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8,
+          fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-ui)',
+          letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8, fontWeight: 600,
         }}>
           Step {step + 1} of {TOUR_STEPS.length}
         </div>
 
         {/* Title */}
         <div style={{
-          fontSize: 19, fontWeight: 800, color: '#e2eaf4',
-          fontFamily: 'monospace', marginBottom: 12, lineHeight: 1.2,
+          fontSize: 20, fontWeight: 700, color: 'var(--text)',
+          fontFamily: 'var(--font-ui)', marginBottom: 10, lineHeight: 1.25,
+          letterSpacing: '-0.01em',
         }}>
           {current.title}
         </div>
 
         {/* Description */}
         <div style={{
-          fontSize: 13, color: '#8fa3b8', fontFamily: 'monospace',
-          lineHeight: 1.7, marginBottom: 18,
+          fontSize: 13.5, color: 'var(--text-sec)', fontFamily: 'var(--font-ui)',
+          lineHeight: 1.65, marginBottom: 18,
         }}>
           {current.description}
         </div>
@@ -228,11 +230,7 @@ export default function OnboardingTour() {
         {current.highlight && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 18 }}>
             {current.highlight.map(h => (
-              <span key={h} style={{
-                padding: '3px 10px', borderRadius: 5,
-                background: '#00d4ff15', border: '1px solid #00d4ff30',
-                fontSize: 11, color: '#00d4ff', fontFamily: 'monospace', fontWeight: 700,
-              }}>
+              <span key={h} className="chip chip-cyan" style={{ fontSize: 11 }}>
                 {h}
               </span>
             ))}
@@ -244,10 +242,12 @@ export default function OnboardingTour() {
           <button
             onClick={handleSkip}
             style={{
-              background: 'none', border: 'none', color: '#3a4a5a',
-              fontSize: 11, fontFamily: 'monospace', cursor: 'pointer',
-              padding: '6px 0',
+              background: 'none', border: 'none', color: 'var(--text-muted)',
+              fontSize: 12, fontFamily: 'var(--font-ui)', cursor: 'pointer',
+              padding: '6px 0', transition: 'color 0.12s',
             }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-sec)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
           >
             Skip tour
           </button>
@@ -256,38 +256,18 @@ export default function OnboardingTour() {
             {step > 0 && (
               <button
                 onClick={handlePrev}
-                style={{
-                  background: 'transparent',
-                  border: '1px solid #1e2d3d',
-                  borderRadius: 8, padding: '8px 16px',
-                  color: '#8fa3b8', fontSize: 13, fontWeight: 700,
-                  fontFamily: 'monospace', cursor: 'pointer',
-                }}
+                className="btn btn-ghost"
+                style={{ padding: '8px 16px' }}
               >
                 ← Back
               </button>
             )}
             <button
               onClick={handleNext}
-              style={{
-                background: 'linear-gradient(135deg, #00d4ff20, #00d4ff40)',
-                border: '1px solid #00d4ff70',
-                borderRadius: 8, padding: '8px 20px',
-                color: '#00d4ff', fontSize: 13, fontWeight: 700,
-                fontFamily: 'monospace', cursor: 'pointer',
-                transition: 'all 0.15s',
-                boxShadow: '0 0 12px #00d4ff20',
-              }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(135deg, #00d4ff30, #00d4ff55)';
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 20px #00d4ff30';
-              }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(135deg, #00d4ff20, #00d4ff40)';
-                (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 0 12px #00d4ff20';
-              }}
+              className="btn btn-primary"
+              style={{ padding: '9px 20px' }}
             >
-              {step === 0 ? 'Start Tour →' : isLast ? 'Start Designing →' : 'Next →'}
+              {step === 0 ? 'Start Tour' : isLast ? 'Start Designing' : 'Next'} →
             </button>
           </div>
         </div>
