@@ -4,96 +4,18 @@ const { useState: useStateC, useRef: useRefC, useEffect: useEffectC, useMemo: us
 
 const API_BASE = 'http://localhost:4000';
 
-// Infer connection protocol from node types
-function inferProtocol(fromType, toType) {
-  const kafkaLike = ['kafka', 'rabbitmq', 'sqs', 'pubsub', 'nats', 'pulsar', 'kinesis', 'eventbridge'];
-  const dbLike    = ['sql', 'nosql', 'mongo', 'cassandra', 'dynamo', 'cockroach', 'neo4j', 'redis', 'memcached', 'influx', 'clickhouse', 'bigquery', 'aws-rds', 'aws-dynamo', 'vectordb', 'influx'];
-  const grpcLike  = ['server', 'k8s', 'pod', 'mesh', 'sidecar', 'inference', 'llm', 'embed', 'rag'];
-  const iotLike   = ['client-iot', 'iot'];
-  if (kafkaLike.includes(fromType) || kafkaLike.includes(toType)) return 'Kafka';
-  if (iotLike.includes(fromType) || iotLike.includes(toType)) return 'MQTT';
-  if (dbLike.includes(toType)) return 'TCP';
-  if (grpcLike.includes(fromType) && grpcLike.includes(toType)) return 'gRPC';
-  if (fromType && (fromType.startsWith('client-') || fromType.startsWith('fe-'))) return 'HTTPS';
-  return 'HTTP';
-}
-
 function Canvas() {
   const store = window.useStore();
   const ui    = window.useUI();
   const { nodes, edges, selectedNodeId, setSelectedNodeId, displayedNodeHealth: nodeHealth,
-          addNode, moveNode, addEdge, removeNode, removeEdge, updateNode, setNodes, setEdges,
+          addNode, moveNode, addEdge, removeNode, updateNode, setNodes, setEdges,
           simConfig, resetCanvas, crashAlerts, setCrashAlerts, crashedNodes } = store;
-  const { heatmapMode, setHeatmapMode } = ui;
 
-  // ── Invalid connection detection (computed from edges + nodes) ───────────────
-  const invalidEdgeMap = useMemoC(() => {
-    if (!window.checkEdgeValidity) return {};
-    const map = {};
-    edges.forEach(e => {
-      const fromNode = nodes.find(n => n.id === e.from);
-      const toNode   = nodes.find(n => n.id === e.to);
-      const v = window.checkEdgeValidity(fromNode, toNode);
-      if (v) map[e.id] = v;
-    });
-    return map;
-  }, [edges, nodes]);
-
-  const invalidTargetIds = useMemoC(() => {
-    const s = new Set();
-    Object.keys(invalidEdgeMap).forEach(eid => {
-      const e = edges.find(x => x.id === eid);
-      if (e) s.add(e.to);
-    });
-    return s;
-  }, [invalidEdgeMap, edges]);
-
-  // Override health status for nodes with invalid incoming connections
-  const effectiveNodeHealth = useMemoC(() => {
-    if (invalidTargetIds.size === 0) return nodeHealth;
-    const result = { ...nodeHealth };
-    invalidTargetIds.forEach(id => {
-      result[id] = { ...(nodeHealth[id] || { load: 0, lat: 0, tput: 0, err: "0.0" }), status: 'misconfigured' };
-    });
-    return result;
-  }, [nodeHealth, invalidTargetIds]);
-
-  // ── Connection alert toasts ──────────────────────────────────────────────────
-  const [connAlerts, setConnAlerts] = useStateC([]);
-  const prevInvalidRef = useRefC(new Set());
-  useEffectC(() => {
-    const currentIds = new Set(Object.keys(invalidEdgeMap));
-    const newIds = [...currentIds].filter(id => !prevInvalidRef.current.has(id));
-    newIds.forEach(eid => {
-      const e = edges.find(x => x.id === eid);
-      const v = invalidEdgeMap[eid];
-      if (!e || !v) return;
-      const alertId = `conn-${eid}`;
-      setConnAlerts(a => [...a.slice(-3), { id: alertId, eid,
-        fromLabel: nodes.find(n => n.id === e.from)?.label || '?',
-        toLabel:   nodes.find(n => n.id === e.to)?.label   || '?',
-        severity: v.severity, reason: v.reason, fix: v.fix,
-      }]);
-      setTimeout(() => setConnAlerts(a => a.filter(x => x.id !== alertId)), 12000);
-    });
-    prevInvalidRef.current = currentIds;
-  }, [invalidEdgeMap]);
-
-  // Crashed node detail modal: separate dismissed state so closing doesn't deselect node
-  const [crashModalDismissed, setCrashModalDismissed] = useStateC(false);
-  // Reset dismissed flag whenever user selects a different node
-  const prevSelectedRef = useRefC(selectedNodeId);
-  useEffectC(() => {
-    if (selectedNodeId !== prevSelectedRef.current) {
-      setCrashModalDismissed(false);
-      prevSelectedRef.current = selectedNodeId;
-    }
-  }, [selectedNodeId]);
-
-  const crashedSelectedNode = !crashModalDismissed && selectedNodeId && effectiveNodeHealth[selectedNodeId]?.status === "crashed"
+  // Crashed node detail modal: show when a crashed node is clicked
+  const crashedSelectedNode = selectedNodeId && nodeHealth[selectedNodeId]?.status === "crashed"
     ? nodes.find(n => n.id === selectedNodeId)
     : null;
-  const crashedSelectedHealth = crashedSelectedNode ? effectiveNodeHealth[crashedSelectedNode.id] : null;
+  const crashedSelectedHealth = crashedSelectedNode ? nodeHealth[crashedSelectedNode.id] : null;
   const crashedSelectedInfo   = crashedSelectedNode ? crashedNodes[crashedSelectedNode.id] : null;
 
   // Stable ref to latest nodes — lets useCallbackC([]) handlers read fresh data without re-closing
@@ -191,17 +113,12 @@ function Canvas() {
     if (nodeEl) nodeEl.classList.remove('hovered');
   }, []);
 
-  // Refs that mirror mutable interaction state — always current, no closure staleness
-  const pendingRef  = useRefC(null);
-  const dragRef     = useRefC(null);
-  const panningRef  = useRefC(null);
-  const addEdgeRef  = useRefC(addEdge);
-  const moveNodeRef = useRefC(moveNode);
-  useEffectC(() => { pendingRef.current  = pending;  }, [pending]);
-  useEffectC(() => { dragRef.current     = drag;     }, [drag]);
-  useEffectC(() => { panningRef.current  = panning;  }, [panning]);
-  useEffectC(() => { addEdgeRef.current  = addEdge;  }, [addEdge]);
-  useEffectC(() => { moveNodeRef.current = moveNode; }, [moveNode]);
+  // Permanent mouseup: always clears stuck pending edge regardless of effect timing
+  useEffectC(() => {
+    const clearPending = () => { setPending(null); setPendingPos(null); };
+    document.addEventListener("mouseup", clearPending);
+    return () => document.removeEventListener("mouseup", clearPending);
+  }, []);
 
   // ---- Pan: click/drag anywhere on canvas that isn't a node or handle ----
   const onStageMouseDown = (e) => {
@@ -227,26 +144,27 @@ function Canvas() {
     setView({ x: nx, y: ny, k: newK });
   };
 
-  // ---- Single permanent global handler (refs = no effect-timing race) ----
+  // ---- Global move/up handler ----
   useEffectC(() => {
-    const onMove = (e) => {
-      const dr = dragRef.current;
-      const p  = pendingRef.current;
-      const pa = panningRef.current;
-      if (dr) {
+    if (!drag && !pending && !panning) return;
+    const move = (e) => {
+      if (drag) {
         const w = toWorld(e.clientX, e.clientY);
-        moveNodeRef.current(dr.id, w.x - dr.dx, w.y - dr.dy);
+        moveNode(drag.id, w.x - drag.dx, w.y - drag.dy);
       }
-      if (p)  setPendingPos(toWorld(e.clientX, e.clientY));
-      if (pa) setView(v => ({ ...v, x: pa.vx + (e.clientX - pa.startX), y: pa.vy + (e.clientY - pa.startY) }));
+      if (pending) {
+        setPendingPos(toWorld(e.clientX, e.clientY));
+      }
+      if (panning) {
+        setView(v => ({ ...v, x: panning.vx + (e.clientX - panning.startX), y: panning.vy + (e.clientY - panning.startY) }));
+      }
     };
-    const onUp = (e) => {
-      const p = pendingRef.current;
-      if (p) {
+    const up = (e) => {
+      if (pending) {
         const tgt = document.elementFromPoint(e.clientX, e.clientY);
         const nodeEl = tgt?.closest("[data-node-id]");
-        if (nodeEl && nodeEl.dataset.nodeId !== p) {
-          addEdgeRef.current(p, nodeEl.dataset.nodeId);
+        if (nodeEl && nodeEl.dataset.nodeId !== pending) {
+          addEdge(pending, nodeEl.dataset.nodeId);
         }
       }
       setDrag(null);
@@ -254,20 +172,17 @@ function Canvas() {
       setPendingPos(null);
       setPanning(null);
     };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup",   onUp);
+    document.addEventListener("mousemove", move);
+    document.addEventListener("mouseup", up);
     return () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup",   onUp);
+      document.removeEventListener("mousemove", move);
+      document.removeEventListener("mouseup", up);
     };
-  }, []); // empty deps — registered once, refs always current
+  }, [drag, pending, panning]);
 
   useEffectC(() => {
     if (!ctxMenu) return;
-    const close = (e) => {
-      if (e.target.closest('.context-menu')) return;
-      setCtxMenu(null);
-    };
+    const close = () => setCtxMenu(null);
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
   }, [ctxMenu]);
@@ -336,9 +251,6 @@ function Canvas() {
           <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
             <path d="M0,0 L10,5 L0,10 Z" fill="rgba(14,165,233,0.85)" />
           </marker>
-          <marker id="arrow-invalid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-            <path d="M0,0 L10,5 L0,10 Z" fill="rgba(248,113,113,0.95)" />
-          </marker>
           <linearGradient id="edge-gradient" x1="0" x2="1" y1="0" y2="0">
             <stop offset="0" stopColor="#6366f1" stopOpacity="0.7"/>
             <stop offset="1" stopColor="#0ea5e9" stopOpacity="0.7"/>
@@ -351,9 +263,8 @@ function Canvas() {
             if (!a || !b) return null;
             // Skip degenerate edges (same-position nodes produce looping artifacts)
             if (Math.abs((a.x + 160) - b.x) < 4 && Math.abs(a.y - b.y) < 4) return null;
-            const fromCrashed = effectiveNodeHealth[a.id]?.status === "crashed";
-            const isInvalid   = !!invalidEdgeMap[e.id];
-            return <EdgeView key={e.id} edge={e} from={a} to={b} running={simConfig.state === "running"} highlight={selectedNodeId === e.from || selectedNodeId === e.to} fromCrashed={fromCrashed} invalid={isInvalid} />;
+            const fromCrashed = nodeHealth[a.id]?.status === "crashed";
+            return <EdgeView key={e.id} edge={e} from={a} to={b} running={simConfig.state === "running"} highlight={selectedNodeId === e.from || selectedNodeId === e.to} fromCrashed={fromCrashed} />;
           })}
           {pending && pendingPos && (() => {
             const a = nodes.find(n => n.id === pending);
@@ -380,10 +291,9 @@ function Canvas() {
           <SysNode
             key={n.id}
             node={n}
-            health={effectiveNodeHealth[n.id]}
+            health={nodeHealth[n.id]}
             selected={selectedNodeId === n.id}
             running={simConfig.state === "running"}
-            heatmapMode={heatmapMode}
           />
         ))}
       </div>
@@ -409,13 +319,6 @@ function Canvas() {
         <button title="Fit canvas (F)" onClick={fit}>{window.SVG.fit}</button>
         <div className="ctrl-divider" />
         <button title="Reset view" className="ctrl-btn-text" onClick={() => setView({ x: 0, y: 0, k: 1 })}>1:1</button>
-        <button
-          title={heatmapMode ? "Disable latency heatmap" : "Enable latency heatmap (shows where latency accumulates)"}
-          className={"ctrl-btn-text" + (heatmapMode ? " active-heatmap" : "")}
-          onClick={() => setHeatmapMode(v => !v)}
-          style={{ fontSize: 14 }}
-        >🌡</button>
-        <div className="ctrl-divider" />
         <button title="Clear canvas" className="ctrl-btn-danger" onClick={() => {
           if (nodes.length === 0) return;
           if (!window.confirm('Clear all nodes and edges?')) return;
@@ -449,7 +352,7 @@ function Canvas() {
       </div>
 
       {ctxMenu && (
-        <div className="context-menu" style={{ left: ctxMenu.x, top: ctxMenu.y }} onMouseDown={e => e.stopPropagation()}>
+        <div className="context-menu" style={{ left: ctxMenu.x, top: ctxMenu.y }}>
           <button onClick={() => { const n = nodes.find(x => x.id === ctxMenu.id); if (n) { addNode(n.type, n.x + 30, n.y + 30); } setCtxMenu(null); }}>
             {window.SVG.copy}<span>Duplicate</span><span className="kbd-mini">⌘D</span>
           </button>
@@ -462,40 +365,12 @@ function Canvas() {
           }}>
             {window.SVG.pencil}<span>Rename</span>
           </button>
-          <div className="ctx-divider" />
-          {/* Disconnect submenu — list edges for this node */}
-          {(() => {
-            const nodeEdges = edges.filter(e => e.from === ctxMenu.id || e.to === ctxMenu.id);
-            if (nodeEdges.length === 0) return (
-              <button disabled style={{ opacity: 0.4 }}>
-                {window.SVG.link}<span>No connections</span>
-              </button>
-            );
-            return (
-              <>
-                <div className="ctx-section-label">Disconnect from:</div>
-                {nodeEdges.map(e => {
-                  const otherId  = e.from === ctxMenu.id ? e.to : e.from;
-                  const other    = nodes.find(n => n.id === otherId);
-                  const isInvalid = !!invalidEdgeMap[e.id];
-                  const dir      = e.from === ctxMenu.id ? '→' : '←';
-                  return (
-                    <button key={e.id}
-                      className={isInvalid ? "danger" : ""}
-                      onClick={() => { removeEdge(e.id); setCtxMenu(null); }}
-                    >
-                      {window.SVG.x}
-                      <span><span style={{ opacity: 0.5, marginRight: 3 }}>{dir}</span>{other?.label || otherId}</span>
-                      {isInvalid && <span className="kbd-mini" style={{ color: "var(--red)" }}>⚠</span>}
-                    </button>
-                  );
-                })}
-              </>
-            );
-          })()}
+          <button onClick={() => { setCtxMenu(null); }}>
+            {window.SVG.share}<span>Connect to...</span>
+          </button>
           <div className="ctx-divider" />
           <button className="danger" onClick={() => { removeNode(ctxMenu.id); setCtxMenu(null); }}>
-            {window.SVG.x}<span>Delete node</span><span className="kbd-mini">⌫</span>
+            {window.SVG.x}<span>Delete</span><span className="kbd-mini">⌫</span>
           </button>
         </div>
       )}
@@ -506,29 +381,12 @@ function Canvas() {
           node={crashedSelectedNode}
           health={crashedSelectedHealth}
           crashInfo={crashedSelectedInfo}
-          onClose={() => setCrashModalDismissed(true)}
-          onOpenConfig={() => { setCrashModalDismissed(true); ui.setRightOpen(true); ui.setRightTab("config"); }}
-          onOpenWhatIf={() => { setCrashModalDismissed(true); ui.setBottomOpen(true); ui.setRibbonTab("whatif"); }}
+          onClose={() => setSelectedNodeId(null)}
+          onOpenConfig={() => { ui.setRightOpen(true); ui.setRightTab("config"); setSelectedNodeId(crashedSelectedNode.id); }}
+          onOpenWhatIf={() => { ui.setBottomOpen(true); ui.setRibbonTab("whatif"); }}
         />
       )}
-
-      {/* ── Invalid connection alert toasts ─────────────────────────────── */}
-      {connAlerts.length > 0 && (
-        <div className="conn-alert-container">
-          {connAlerts.map(a => (
-            <div key={a.id} className={"conn-alert " + (a.severity === 'critical' ? 'critical' : 'warn')}>
-              <div className="conn-alert-header">
-                <span>{a.severity === 'critical' ? '🚫 INVALID CONNECTION' : '⚠️ ARCHITECTURE WARNING'}</span>
-                <button className="crash-alert-close" onClick={() => setConnAlerts(x => x.filter(c => c.id !== a.id))}>✕</button>
-              </div>
-              <div className="conn-alert-path">{a.fromLabel} <span className="conn-arrow">→</span> {a.toLabel}</div>
-              <div className="conn-alert-reason">{a.reason}</div>
-              <div className="conn-alert-fix">Fix: {a.fix}</div>
-            </div>
-          ))}
-        </div>
-      )}
-
+    
       {/* ── Crash / Recovery alert toasts ────────────────────────────────── */}
       {crashAlerts.length > 0 && (
         <div className="crash-alert-container">
@@ -587,34 +445,19 @@ function Canvas() {
 }
 
 /* ---------- Node ---------- */
-const SysNode = React.memo(function SysNode({ node, health, selected, running, heatmapMode }) {
+const SysNode = React.memo(function SysNode({ node, health, selected, running }) {
   const t = window.findNodeType(node.type);
   const cat = window.CATEGORIES[t.cat];
   const h = health || { status: "idle", load: 0, lat: 0, tput: 0, err: 0 };
   const loadPct = Math.round(h.load * 100);
   const loadColor = loadPct > 85 ? "var(--red)" : loadPct > 60 ? "var(--amber)" : "var(--green)";
 
-  const heatColor = (heatmapMode && running && h.lat > 0)
-    ? h.lat > 500 ? "rgba(248,113,113,0.5)"
-      : h.lat > 300 ? "rgba(251,146,60,0.42)"
-      : h.lat > 100 ? "rgba(251,191,36,0.3)"
-      : "rgba(34,197,94,0.22)"
-    : null;
-
-  const isMisconfigured = h.status === 'misconfigured';
-
   return (
     <div
       data-node-id={node.id}
-      className={"sys-node" + (selected ? " selected" : "") + (isMisconfigured ? " misconfigured" : h.status === "crashed" ? " crashed" : h.status === "failed" ? " failed" : "") + (h.bottleneck ? " bottleneck" : "") + (heatColor ? " heatmap-active" : "")}
+      className={"sys-node" + (selected ? " selected" : "") + (h.status === "crashed" ? " crashed" : h.status === "failed" ? " failed" : "") + (h.bottleneck ? " bottleneck" : "")}
       style={{ left: node.x, top: node.y, "--node-color": cat.color, "--node-glow": cat.glow, "--load-color": loadColor }}
     >
-      {heatColor && !isMisconfigured && (
-        <div className="heatmap-overlay" style={{ background: heatColor }} />
-      )}
-      {isMisconfigured && (
-        <div className="invalid-conn-overlay" />
-      )}
       <div className="handle left" data-handle="true" />
       <div className="handle right" data-handle="true" />
       <div className="sys-node-header">
@@ -624,12 +467,7 @@ const SysNode = React.memo(function SysNode({ node, health, selected, running, h
       </div>
       <div className="sys-node-body">
         <div className="load-bar"><div className="load-fill" style={{ width: loadPct + "%" }} /></div>
-        {isMisconfigured ? (
-          <div className="node-crash-reason" title="Invalid connection detected — see Advisor tab">
-            <span className="node-crash-code" style={{ color: "var(--red)" }}>INVALID CONN</span>
-            <span className="node-crash-hint">⚠ Right-click to fix</span>
-          </div>
-        ) : h.status === "crashed" && h.crashReason ? (
+        {h.status === "crashed" && h.crashReason ? (
           <div className="node-crash-reason" title={h.crashReason.fix}>
             <span className="node-crash-code">{h.crashReason.code.replace(/_/g, " ")}</span>
             <span className="node-crash-hint">↑ Config to recover</span>
@@ -652,8 +490,7 @@ const SysNode = React.memo(function SysNode({ node, health, selected, running, h
   prev.node.type === next.node.type &&
   prev.selected === next.selected &&
   prev.running === next.running &&
-  prev.heatmapMode === next.heatmapMode &&
-  prev.health?.status === next.health?.status &&   // covers misconfigured
+  prev.health?.status === next.health?.status &&
   prev.health?.load === next.health?.load &&
   prev.health?.lat === next.health?.lat &&
   prev.health?.tput === next.health?.tput &&
@@ -662,151 +499,67 @@ const SysNode = React.memo(function SysNode({ node, health, selected, running, h
   prev.health?.crashReason?.code === next.health?.crashReason?.code
 );
 
-/* ---------- Edge with flowing particles + reverse return packets ---------- */
-const EdgeView = React.memo(function EdgeView({ edge, from, to, running, highlight, fromCrashed, invalid }) {
+/* ---------- Edge with multiple flowing particles (imperative animation — zero setState) ---------- */
+const EdgeView = React.memo(function EdgeView({ edge, from, to, running, highlight, fromCrashed }) {
   const ax = from.x + 160, ay = from.y + 30;
   const bx = to.x, by = to.y + 30;
   const dx = bx - ax;
   const cx1 = ax + Math.max(40, Math.abs(dx) * 0.4);
   const cx2 = bx - Math.max(40, Math.abs(dx) * 0.4);
   const d = `M${ax},${ay} C${cx1},${ay} ${cx2},${by} ${bx},${by}`;
-
-  // Protocol label: user-set or auto-inferred from node types
-  const protocol = edge.protocol || inferProtocol(from.type, to.type);
-  const showProtocolLabel = protocol !== 'HTTP';
-  const midX = (ax + 3 * cx1 + 3 * cx2 + bx) / 8;
-  const midY = (ay + by) / 2;
-
   const pathRef = useRefC();
-  // Forward request particles (cyan/blue)
   const c0 = useRefC(), c1 = useRefC(), c2 = useRefC();
-  // Reverse response particles (orange — data coming back to user)
-  const r0 = useRefC(), r1 = useRefC();
   const rafRef = useRefC();
 
   useEffectC(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    const fwdCircles = [c0.current, c1.current, c2.current];
-    const retCircles = [r0.current, r1.current];
-    const allCircles = [...fwdCircles, ...retCircles];
-
+    const circles = [c0.current, c1.current, c2.current];
+    // Stop particles if sim not running OR source node crashed
     if (!running || fromCrashed || !pathRef.current) {
-      allCircles.forEach(c => { if (c) c.setAttribute('opacity', '0'); });
-      // On invalid: flash forward particles red then hide
-      if (invalid && running && !fromCrashed) {
-        fwdCircles.forEach(c => { if (c) { c.setAttribute('opacity', '0.5'); c.setAttribute('fill', 'var(--red)'); } });
-        setTimeout(() => fwdCircles.forEach(c => { if (c) c.setAttribute('opacity', '0'); }), 400);
-      }
+      circles.forEach(c => { if (c) c.setAttribute('opacity', '0'); });
       return;
     }
-
     const len = pathRef.current.getTotalLength();
     const start = performance.now();
-    const FWD_DUR = 2200;  // forward request speed
-    const RET_DUR = 3000;  // return response speed (slightly slower)
-
+    const DURATION = 2200;
     const tick = (now) => {
       const elapsed = now - start;
-
-      // Forward particles (cyan) — requests flowing to destination
-      if (!invalid) {
-        for (let i = 0; i < 3; i++) {
-          const phase = (elapsed / FWD_DUR + i / 3) % 1;
-          const p = pathRef.current.getPointAtLength(phase * len);
-          const c = fwdCircles[i];
-          if (c) {
-            c.setAttribute('cx', p.x);
-            c.setAttribute('cy', p.y);
-            c.setAttribute('opacity', String(0.4 + 0.6 * Math.sin(phase * Math.PI)));
-          }
-        }
-      } else {
-        // Invalid connection: show red X-like pulses going forward, no return
-        for (let i = 0; i < 3; i++) {
-          const phase = (elapsed / (FWD_DUR * 1.4) + i / 3) % 1;
-          const p = pathRef.current.getPointAtLength(phase * len);
-          const c = fwdCircles[i];
-          if (c) {
-            c.setAttribute('cx', p.x);
-            c.setAttribute('cy', p.y);
-            c.setAttribute('opacity', String(0.25 + 0.35 * Math.sin(phase * Math.PI)));
-          }
+      for (let i = 0; i < 3; i++) {
+        const phase = (elapsed / DURATION + i / 3) % 1;
+        const p = pathRef.current.getPointAtLength(phase * len);
+        const c = circles[i];
+        if (c) {
+          c.setAttribute('cx', p.x);
+          c.setAttribute('cy', p.y);
+          c.setAttribute('opacity', 0.4 + 0.6 * Math.sin(phase * Math.PI));
         }
       }
-
-      // Return particles (orange) — responses flowing back to the client
-      // Only show on valid connections (invalid ones don't get responses)
-      if (!invalid) {
-        for (let i = 0; i < 2; i++) {
-          const phase = (elapsed / RET_DUR + i / 2 + 0.4) % 1;
-          const p = pathRef.current.getPointAtLength((1 - phase) * len); // REVERSE direction
-          const r = retCircles[i];
-          if (r) {
-            r.setAttribute('cx', p.x);
-            r.setAttribute('cy', p.y);
-            r.setAttribute('opacity', String(0.3 + 0.45 * Math.sin(phase * Math.PI)));
-          }
-        }
-      } else {
-        retCircles.forEach(r => { if (r) r.setAttribute('opacity', '0'); });
-      }
-
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [running, fromCrashed, invalid, d]);
+  }, [running, fromCrashed, d]);
 
-  const stroke  = invalid ? "var(--red)" : highlight ? "var(--cyan)" : "url(#edge-gradient)";
-  const opacity = invalid ? 0.9 : highlight ? 0.95 : 0.6;
-  const width   = invalid ? 2.2 : highlight ? 2 : 1.4;
-  const dash    = invalid ? "6 4" : "none";
-  const marker  = invalid ? "url(#arrow-invalid)" : "url(#arrow)";
+  const stroke = highlight ? "var(--cyan)" : "url(#edge-gradient)";
+  const opacity = highlight ? 0.95 : 0.6;
+  const width = highlight ? 2 : 1.4;
 
   return (
     <g className="edge-group">
-      <path ref={pathRef} d={d} stroke={stroke} strokeWidth={width} strokeDasharray={dash} fill="none" markerEnd={marker} opacity={opacity} className={"edge-path" + (running ? " flowing" : "")} />
-      {showProtocolLabel && (
-        <g>
-          <rect
-            x={midX - 18} y={midY - 14}
-            width={36} height={13}
-            rx={3} ry={3}
-            fill="rgba(10,11,18,0.82)"
-            stroke={invalid ? "rgba(248,113,113,0.4)" : "rgba(56,189,248,0.25)"}
-            strokeWidth="0.8"
-            pointerEvents="none"
-          />
-          <text
-            x={midX} y={midY - 4}
-            className="edge-protocol-label"
-            textAnchor="middle"
-            pointerEvents="none"
-            style={{ fill: invalid ? "rgba(248,113,113,0.9)" : undefined }}
-          >{invalid ? "BLOCKED" : protocol}</text>
-        </g>
-      )}
-      {/* Forward request particles (cyan) */}
-      <circle ref={c0} className="particle" r="3.2" fill={invalid ? "var(--red)" : "var(--cyan)"} opacity="0" />
-      <circle ref={c1} className="particle" r="3.2" fill={invalid ? "var(--red)" : "var(--cyan)"} opacity="0" />
-      <circle ref={c2} className="particle" r="3.2" fill={invalid ? "var(--red)" : "var(--cyan)"} opacity="0" />
-      {/* Reverse response packets (orange — coming back to client) */}
-      <circle ref={r0} r="2.6" fill="var(--amber)" opacity="0" />
-      <circle ref={r1} r="2.6" fill="var(--amber)" opacity="0" />
+      <path ref={pathRef} d={d} stroke={stroke} strokeWidth={width} fill="none" markerEnd="url(#arrow)" opacity={opacity} className={"edge-path" + (running ? " flowing" : "")} />
+      <circle ref={c0} className="particle" r="3.2" opacity="0" />
+      <circle ref={c1} className="particle" r="3.2" opacity="0" />
+      <circle ref={c2} className="particle" r="3.2" opacity="0" />
     </g>
   );
 }, (prev, next) =>
   prev.from.x === next.from.x &&
   prev.from.y === next.from.y &&
-  prev.from.type === next.from.type &&
   prev.to.x === next.to.x &&
   prev.to.y === next.to.y &&
-  prev.to.type === next.to.type &&
-  prev.edge.protocol === next.edge.protocol &&
   prev.running === next.running &&
   prev.highlight === next.highlight &&
-  prev.fromCrashed === next.fromCrashed &&
-  prev.invalid === next.invalid
+  prev.fromCrashed === next.fromCrashed
 );
 
 /* ---------- Minimap (click/drag to pan canvas) ---------- */
@@ -937,7 +690,7 @@ function CrashDetailModal({ node, health, crashInfo, onClose, onOpenConfig, onOp
 
   return (
     <>
-      <div className="crash-modal-backdrop" onClick={(e) => { e.stopPropagation(); onClose(); }} />
+      <div className="crash-modal-backdrop" onClick={onClose} />
       <div className="crash-modal">
 
         {/* Header */}
