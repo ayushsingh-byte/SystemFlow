@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
@@ -13,11 +14,21 @@ const app = express();
 
 // ─── Security & parsing middleware ────────────────────────────────────────────
 
-app.use(helmet());
+// Relax helmet CSP so the CDN React/Babel scripts load from public/
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
 
+// Allow any localhost origin (dev) and same-origin (when served as static)
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, cb) => {
+      if (!origin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return cb(null, true);
+      }
+      cb(new Error('CORS: origin not allowed'));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -45,6 +56,22 @@ app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/simulations', simulationRoutes);
 app.use('/api/analysis', analysisRoutes);
+
+// ─── Serve frontend static files ──────────────────────────────────────────────
+// Serving from backend means frontend + API share the same origin — no CORS needed.
+
+const PUBLIC_DIR = path.join(__dirname, '..', '..', 'public');
+app.use(express.static(PUBLIC_DIR));
+
+// SPA fallback: GET requests that don't match a file serve SystemFlow.html
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api') || req.path.startsWith('/health') || req.path.startsWith('/ws')) {
+    return next();
+  }
+  res.sendFile(path.join(PUBLIC_DIR, 'SystemFlow.html'), (err) => {
+    if (err) next();
+  });
+});
 
 // ─── 404 handler ──────────────────────────────────────────────────────────────
 

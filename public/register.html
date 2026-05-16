@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Create Account — SystemFlow</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #06070d;
+      --bg2: #0a0c14;
+      --surface: rgba(20, 22, 32, 0.85);
+      --surface-solid: #14161f;
+      --surface2: rgba(30, 33, 46, 0.9);
+      --border: #1f2230;
+      --border2: #2a2e3f;
+      --text: #f4f5fa;
+      --text-sec: #b0b5c7;
+      --text-muted: #6e7388;
+      --cyan: #38bdf8;
+      --cyan-dim: rgba(56,189,248,0.13);
+      --cyan-glow: rgba(56,189,248,0.35);
+      --indigo: #818cf8;
+      --indigo-dim: rgba(129,140,248,0.13);
+      --green: #22c55e;
+      --green-dim: rgba(34,197,94,0.13);
+      --red: #ef4444;
+      --red-dim: rgba(239,68,68,0.15);
+      --amber: #fbbf24;
+      --mono: "JetBrains Mono", ui-monospace, monospace;
+      --sans: "Inter", -apple-system, sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%; width: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 14px;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .auth-shell { display: flex; height: 100vh; width: 100vw; }
+
+    /* ── Left brand panel ── */
+    .brand-panel {
+      width: 420px;
+      flex-shrink: 0;
+      background: linear-gradient(135deg, #06070d 0%, #0d0f1c 50%, #06080f 100%);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 48px 44px;
+      position: relative;
+      overflow: hidden;
+    }
+    .brand-panel::before {
+      content: "";
+      position: absolute;
+      top: -100px; right: -60px;
+      width: 360px; height: 360px;
+      background: radial-gradient(circle, rgba(129,140,248,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .brand-panel::after {
+      content: "";
+      position: absolute;
+      bottom: -80px; left: -40px;
+      width: 280px; height: 280px;
+      background: radial-gradient(circle, rgba(34,197,94,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 48px;
+      position: relative; z-index: 1;
+    }
+    .brand-icon {
+      width: 38px; height: 38px;
+      background: rgba(56,189,248,0.1);
+      border: 1px solid rgba(56,189,248,0.3);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .brand-icon svg { width: 20px; height: 20px; }
+    .brand-wordmark { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; color: var(--text); }
+    .brand-wordmark span { color: var(--cyan); }
+
+    .brand-headline {
+      font-size: 30px; font-weight: 800;
+      line-height: 1.18; letter-spacing: -0.03em;
+      color: var(--text);
+      margin-bottom: 14px;
+      position: relative; z-index: 1;
+    }
+    .brand-headline em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--indigo) 0%, var(--cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .brand-sub {
+      font-size: 13.5px; line-height: 1.65;
+      color: var(--text-muted);
+      margin-bottom: 44px;
+      position: relative; z-index: 1;
+    }
+
+    /* Steps */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      flex: 1;
+      position: relative; z-index: 1;
+    }
+    .step {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .step-num {
+      font-family: var(--mono);
+      font-size: 10px; font-weight: 700;
+      color: var(--cyan);
+      opacity: 0.6;
+      padding-top: 3px;
+      flex-shrink: 0;
+      letter-spacing: 0.04em;
+      min-width: 24px;
+    }
+    .step-body {}
+    .step-title {
+      font-size: 13.5px; font-weight: 600;
+      color: var(--text-sec);
+      margin-bottom: 2px;
+    }
+    .step-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    /* Feature chips */
+    .feature-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 36px;
+      position: relative; z-index: 1;
+    }
+    .chip {
+      padding: 5px 10px;
+      border-radius: 20px;
+      font-size: 10.5px; font-weight: 600;
+      font-family: var(--mono);
+      border: 1px solid;
+    }
+    .chip-cyan { color: var(--cyan); border-color: rgba(56,189,248,0.25); background: var(--cyan-dim); }
+    .chip-indigo { color: var(--indigo); border-color: rgba(129,140,248,0.25); background: var(--indigo-dim); }
+    .chip-green { color: var(--green); border-color: rgba(34,197,94,0.25); background: var(--green-dim); }
+
+    .version-tag {
+      position: absolute;
+      bottom: 28px; left: 44px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--border2);
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Right form panel ── */
+    .form-panel {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg);
+      padding: 24px;
+      overflow-y: auto;
+    }
+    .form-card {
+      width: 100%;
+      max-width: 440px;
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 20px;
+      padding: 40px 40px 36px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 4px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03);
+    }
+    .form-title { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; color: var(--text); margin-bottom: 4px; }
+    .form-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; }
+
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block;
+      font-size: 12px; font-weight: 600;
+      color: var(--text-sec);
+      margin-bottom: 7px;
+      letter-spacing: 0.01em;
+    }
+    .field input {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border2);
+      border-radius: 10px;
+      padding: 11px 14px;
+      font-family: var(--sans);
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+    .field input::placeholder { color: var(--text-muted); }
+    .field input:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px var(--cyan-dim); }
+    .field input:disabled { opacity: 0.5; cursor: not-allowed; }
+    .field input.invalid { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
+
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+
+    /* Password strength */
+    .pw-strength {
+      margin-top: 6px;
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .pw-bar {
+      flex: 1; height: 3px; border-radius: 2px;
+      background: var(--border2);
+      transition: background 0.2s;
+    }
+    .pw-label { font-size: 10px; color: var(--text-muted); min-width: 36px; text-align: right; }
+
+    .error-msg {
+      display: none;
+      background: var(--red-dim);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 8px;
+      padding: 10px 13px;
+      font-size: 13px;
+      color: var(--red);
+      margin-bottom: 16px;
+    }
+    .error-msg.show { display: block; }
+
+    .btn-submit {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, var(--indigo) 0%, var(--cyan) 100%);
+      border: none;
+      border-radius: 10px;
+      font-family: var(--sans);
+      font-size: 14px; font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: opacity 0.18s, transform 0.18s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-submit:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-submit:active { transform: translateY(0); }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .terms {
+      font-size: 11px; color: var(--text-muted);
+      text-align: center;
+      margin-top: 14px;
+      line-height: 1.6;
+    }
+    .terms a { color: var(--cyan); text-decoration: none; }
+
+    .form-footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .form-footer a { color: var(--cyan); text-decoration: none; font-weight: 500; cursor: pointer; }
+    .form-footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 768px) {
+      .brand-panel { display: none; }
+      .form-panel { padding: 16px; }
+      .form-card { padding: 28px 20px; }
+      .field-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="auth-shell">
+
+  <!-- ── Left brand panel ── -->
+  <div class="brand-panel">
+    <div class="brand-logo">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L22 7.5V16.5L12 22L2 16.5V7.5L12 2Z" stroke="#38bdf8" stroke-width="1.6" fill="rgba(56,189,248,0.08)"/>
+          <path d="M12 7L17 9.8v5.4L12 18l-5-2.8V9.8L12 7z" fill="rgba(56,189,248,0.15)" stroke="rgba(56,189,248,0.5)" stroke-width="1"/>
+        </svg>
+      </div>
+      <div class="brand-wordmark">System<span>Flow</span></div>
+    </div>
+
+    <h1 class="brand-headline">Build, simulate,<br><em>ship with confidence.</em></h1>
+    <p class="brand-sub">Model any distributed architecture and stress-test it before it ever hits production.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-body">
+          <div class="step-title">Drag &amp; drop nodes</div>
+          <div class="step-desc">108 node types — databases, queues, AI, cloud services.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-body">
+          <div class="step-title">Wire the topology</div>
+          <div class="step-desc">Connect nodes visually. The advisor flags weaknesses instantly.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-body">
+          <div class="step-title">Simulate load</div>
+          <div class="step-desc">Fire up to 1M req/s. Watch latency, errors, and cascades live.</div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-body">
+          <div class="step-title">Fix before prod</div>
+          <div class="step-desc">12 test scenarios, chaos mode, AI advisor — ship with confidence.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="feature-chips">
+      <span class="chip chip-cyan">108 nodes</span>
+      <span class="chip chip-indigo">Chaos mode</span>
+      <span class="chip chip-green">Test Lab</span>
+      <span class="chip chip-cyan">AI Advisor</span>
+      <span class="chip chip-indigo">1M req/s</span>
+    </div>
+
+    <div class="version-tag">v2.0 — Free to start, no credit card</div>
+  </div>
+
+  <!-- ── Right form panel ── -->
+  <div class="form-panel">
+    <div class="form-card">
+      <div class="form-title">Create your account</div>
+      <div class="form-sub">Free forever. Upgrade when you need more.</div>
+
+      <div id="error" class="error-msg"></div>
+
+      <div class="field">
+        <label for="name">Full name</label>
+        <input type="text" id="name" placeholder="Jane Smith" autocomplete="name"/>
+      </div>
+      <div class="field">
+        <label for="email">Email address</label>
+        <input type="email" id="email" placeholder="you@example.com" autocomplete="email"/>
+      </div>
+      <div class="field-row">
+        <div class="field" style="margin-bottom:0">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="min 6 chars" autocomplete="new-password" oninput="updateStrength()"/>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label for="confirm">Confirm</label>
+          <input type="password" id="confirm" placeholder="repeat" autocomplete="new-password"/>
+        </div>
+      </div>
+      <div class="pw-strength" id="strength-row" style="margin-bottom:16px;display:none">
+        <div class="pw-bar" id="bar1"></div>
+        <div class="pw-bar" id="bar2"></div>
+        <div class="pw-bar" id="bar3"></div>
+        <div class="pw-bar" id="bar4"></div>
+        <div class="pw-label" id="strength-label"></div>
+      </div>
+
+      <div id="error2" class="error-msg"></div>
+
+      <button class="btn-submit" id="submit-btn" onclick="handleRegister()">
+        Create account
+      </button>
+
+      <div class="terms">
+        By creating an account you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.
+      </div>
+
+      <div class="form-footer" style="margin-top:18px">
+        Already have an account? <a href="/login.html">Sign in</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Redirect if already logged in
+  if (localStorage.getItem('sf_current_user')) {
+    window.location.href = '/SystemFlow.html';
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('error');
+    el.textContent = msg;
+    el.classList.add('show');
+    document.getElementById('error2').classList.remove('show');
+  }
+  function hideError() {
+    document.getElementById('error').classList.remove('show');
+    document.getElementById('error2').classList.remove('show');
+  }
+  function setLoading(on) {
+    const btn = document.getElementById('submit-btn');
+    btn.disabled = on;
+    btn.innerHTML = on
+      ? '<div class="spinner"></div> Creating account…'
+      : 'Create account';
+  }
+
+  function updateStrength() {
+    const pw = document.getElementById('password').value;
+    const row = document.getElementById('strength-row');
+    if (!pw) { row.style.display = 'none'; return; }
+    row.style.display = 'flex';
+    let score = 0;
+    if (pw.length >= 8) score++;
+    if (pw.length >= 12) score++;
+    if (/[A-Z]/.test(pw) && /[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    const colors = ['#ef4444', '#f59e0b', '#38bdf8', '#22c55e'];
+    const labels = ['Weak', 'Fair', 'Good', 'Strong'];
+    for (let i = 1; i <= 4; i++) {
+      const bar = document.getElementById('bar' + i);
+      bar.style.background = i <= score ? colors[score - 1] : 'var(--border2)';
+    }
+    document.getElementById('strength-label').textContent = labels[score - 1] || '';
+    document.getElementById('strength-label').style.color = score > 0 ? colors[score - 1] : 'var(--text-muted)';
+  }
+
+  async function handleRegister() {
+    hideError();
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const password = document.getElementById('password').value;
+    const confirm = document.getElementById('confirm').value;
+
+    if (!name) { showError('Enter your full name.'); return; }
+    if (!email || !email.includes('@')) { showError('Enter a valid email address.'); return; }
+    if (!password || password.length < 8) { showError('Password must be at least 8 characters.'); return; }
+    if (password !== confirm) { showError('Passwords do not match.'); return; }
+
+    setLoading(true);
+
+    // Try backend API first
+    try {
+      const resp = await fetch('http://localhost:4000/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name }),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const u = data.user;
+        const initials = name.split(' ').map(s => s[0]).slice(0, 2).join('').toUpperCase();
+        localStorage.setItem('sf_token', data.token);
+        localStorage.setItem('sf_current_user', JSON.stringify({
+          id: u.id, email: u.email, name: u.name, initials, avatar: null,
+        }));
+        window.location.href = '/SystemFlow.html';
+        return;
+      }
+      if (resp.status === 409) {
+        setLoading(false);
+        showError('An account with that email already exists.');
+        return;
+      }
+      if (resp.status === 400) {
+        const data = await resp.json().catch(() => ({}));
+        setLoading(false);
+        showError(data.error || 'Registration failed. Check your details.');
+        return;
+      }
+    } catch (_) { /* backend unavailable — fall through to localStorage */ }
+
+    // Fallback: localStorage registration (demo mode)
+    const users = JSON.parse(localStorage.getItem('sf_users') || '[]');
+    if (users.find(u => u.email === email)) { setLoading(false); showError('Account already exists.'); return; }
+    const initials = name.split(' ').map(s => s[0]).slice(0, 2).join('').toUpperCase();
+    users.push({ email, name, password, initials, avatar: null, createdAt: Date.now() });
+    localStorage.setItem('sf_users', JSON.stringify(users));
+    localStorage.setItem('sf_current_user', JSON.stringify({ email, name, initials, avatar: null }));
+    window.location.href = '/SystemFlow.html';
+  }
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') handleRegister();
+  });
+</script>
+</body>
+</html>
