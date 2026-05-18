@@ -1,0 +1,96 @@
+# SystemFlow Intelligence Platform — build targets
+# Usage: make -f Makefile.intel <target>
+# Does NOT conflict with any existing Makefile in the repo
+
+COLLECTOR_DIR := ./collector
+ML_DIR        := ./ml
+INFRA_DIR     := ./infra
+
+# ── Dev environment ──────────────────────────────────────────────────────────
+
+.PHONY: intel-up intel-down intel-logs
+
+intel-up:
+	docker compose -f $(INFRA_DIR)/docker-compose.intel.yml up -d
+	@echo "VictoriaMetrics: http://localhost:8428"
+	@echo "Neo4j Browser:   http://localhost:7474  (neo4j / systemflow_dev)"
+	@echo "Kafka:           localhost:9092"
+
+intel-down:
+	docker compose -f $(INFRA_DIR)/docker-compose.intel.yml down
+
+intel-logs:
+	docker compose -f $(INFRA_DIR)/docker-compose.intel.yml logs -f
+
+# ── Go collectors ─────────────────────────────────────────────────────────────
+
+.PHONY: collector-build collector-linux-host collector-nginx collector-postgres collector-redis
+
+collector-build:
+	cd $(COLLECTOR_DIR) && go build ./cmd/...
+
+collector-linux-host:
+	cd $(COLLECTOR_DIR) && go run ./cmd/linux-host \
+		--node-id=$$HOSTNAME \
+		--brokers=$${KAFKA_BROKERS:-localhost:9092} \
+		--interval=15s
+
+collector-nginx:
+	cd $(COLLECTOR_DIR) && go run ./cmd/nginx \
+		--node-id=nginx:$${HOSTNAME} \
+		--status-url=$${NGINX_STATUS_URL:-http://localhost/nginx_status} \
+		--brokers=$${KAFKA_BROKERS:-localhost:9092}
+
+collector-postgres:
+	cd $(COLLECTOR_DIR) && go run ./cmd/postgres \
+		--node-id=postgresql:$${HOSTNAME} \
+		--dsn=$${PG_DSN:-postgres://localhost:5432/postgres?sslmode=disable} \
+		--brokers=$${KAFKA_BROKERS:-localhost:9092}
+
+collector-redis:
+	cd $(COLLECTOR_DIR) && go run ./cmd/redis \
+		--node-id=redis:$${HOSTNAME} \
+		--addr=$${REDIS_ADDR:-localhost:6379} \
+		--brokers=$${KAFKA_BROKERS:-localhost:9092}
+
+# ── Python ML service ─────────────────────────────────────────────────────────
+
+.PHONY: ml-install ml-serve ml-test
+
+ml-install:
+	pip install -r $(ML_DIR)/requirements.txt
+
+ml-serve:
+	uvicorn ml.api:app --port 8000 --reload --app-dir .
+
+ml-test:
+	python -m pytest $(ML_DIR)/tests/ -v
+
+# ── Signal wiring tests ───────────────────────────────────────────────────────
+
+.PHONY: test-signal test-all-signals
+
+test-signal:
+	@if [ -z "$(SIGNAL)" ]; then echo "Usage: make -f Makefile.intel test-signal SIGNAL=cpu_usage"; exit 1; fi
+	@echo "Testing signal: $(SIGNAL)"
+	# TODO Phase 1: emit one reading → verify in VictoriaMetrics query API
+	curl -s "http://localhost:8428/api/v1/query?query=sf_$(SIGNAL)" | python3 -m json.tool
+
+test-all-signals:
+	@echo "Running wiring checklist for all signals..."
+	# TODO Phase 1: iterate AllSignals, call test-signal for each
+
+# ── Go tests ─────────────────────────────────────────────────────────────────
+
+.PHONY: collector-test
+
+collector-test:
+	cd $(COLLECTOR_DIR) && go test ./... -v
+
+# ── Lint ─────────────────────────────────────────────────────────────────────
+
+.PHONY: intel-lint
+
+intel-lint:
+	cd $(COLLECTOR_DIR) && golangci-lint run ./...
+	cd $(ML_DIR) && ruff check .
