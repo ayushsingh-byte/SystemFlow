@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+backend/node_modules/
+packages/*/node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -23,6 +25,22 @@
 # misc
 .DS_Store
 *.pem
+
+# SQLite database files
+backend/data/*.db
+backend/data/*.db-shm
+backend/data/*.db-wal
+
+# tool output
+graphify-out/
+
+# claude-specific (not project code)
+CLAUDE.md
+.claude/
+
+# private business docs
+INVESTOR_PITCH.md
+Makefile.intel
 
 # debug
 npm-debug.log*
