@@ -1,0 +1,137 @@
+type: postgresql
+family: RelationalDatabase
+version_range: ">=12"
+
+baseline_behavior:
+  primary_bottleneck: disk_io
+  secondary_bottlenecks: [memory, connections, cpu]
+  latency_sensitivity: critical
+  memory_pattern: "Shared buffer pool (default 25% RAM) + per-connection work_mem; OS page cache critical"
+  cpu_pattern: "Moderate under OLTP; spikes on sequential scans, sorts, aggregations, vacuum"
+  scale_characteristic: vertical
+  statefulness: stateful
+
+health_signals:
+  critical:
+    - disk_iops_saturation
+    - connection_pool_saturation
+    - disk_io_wait
+    - disk_queue_depth
+    - disk_latency_write
+    - error_rate_5xx
+  warning:
+    - request_latency_p99
+    - connection_count_active
+    - ram_pressure
+    - disk_iops_read
+    - disk_iops_write
+  informational:
+    - request_rate
+    - cpu_usage
+    - disk_capacity_used
+    - disk_throughput_read
+    - disk_throughput_write
+
+reaction_patterns:
+  - trigger:
+      signal: disk_iops_saturation
+      op: ">"
+      value: 0.8
+    description: "Disk IOPS saturated — all queries waiting on I/O, latency spikes propagate to all callers"
+    expected_delay_ms: 300
+    confidence: 0.97
+    expected_downstream_effects:
+      - edge_type: DB_QUERY
+        affected_signal: request_latency_p99
+        expected_change: spike
+        expected_magnitude: large
+      - edge_type: DB_QUERY
+        affected_signal: request_queue_depth
+        expected_change: increase
+        expected_magnitude: large
+
+  - trigger:
+      signal: connection_pool_saturation
+      op: ">"
+      value: 0.9
+    description: "Connection pool exhausted — new queries queued or rejected"
+    expected_delay_ms: 100
+    confidence: 0.95
+    expected_downstream_effects:
+      - edge_type: DB_QUERY
+        affected_signal: error_rate_5xx
+        expected_change: spike
+        expected_magnitude: large
+      - edge_type: DB_QUERY
+        affected_signal: request_latency_p99
+        expected_change: increase
+        expected_magnitude: large
+
+  - trigger:
+      signal: disk_io_wait
+      op: ">"
+      value: 30   # percent
+    description: "High IO wait — CPU cycles wasted waiting for disk; effective throughput halved"
+    expected_delay_ms: 500
+    confidence: 0.90
+    expected_downstream_effects:
+      - edge_type: DB_QUERY
+        affected_signal: request_latency_p99
+        expected_change: increase
+        expected_magnitude: moderate
+      - edge_type: DB_QUERY
+        affected_signal: request_rate
+        expected_change: decrease
+        expected_magnitude: moderate
+
+  - trigger:
+      signal: ram_pressure
+      op: ">"
+      value: 0.8
+    description: "Memory pressure causes buffer pool eviction — queries miss cache and hit disk"
+    expected_delay_ms: 1000
+    confidence: 0.85
+    expected_downstream_effects:
+      - edge_type: DB_QUERY
+        affected_signal: disk_iops_read
+        expected_change: increase
+        expected_magnitude: moderate
+      - edge_type: DB_QUERY
+        affected_signal: request_latency_p99
+        expected_change: increase
+        expected_magnitude: moderate
+
+failure_signatures:
+  - name: disk_thrash
+    description: "Disk IOPS at ceiling — all queries serialized on I/O"
+    signal_sequence:
+      - { signal: disk_iops_saturation, trend: rising, threshold: 0.85 }
+      - { signal: disk_queue_depth, trend: rising }
+      - { signal: request_latency_p99, trend: spike }
+    typical_cause: "Missing index causing sequential scan; checkpoint flood; autovacuum storm"
+
+  - name: connection_exhaustion
+    description: "max_connections reached — application gets 'too many clients' errors"
+    signal_sequence:
+      - { signal: connection_pool_saturation, trend: rising, threshold: 0.95 }
+      - { signal: error_rate_5xx, trend: spike }
+    typical_cause: "Application not using connection pooler (PgBouncer); connection leak"
+
+  - name: oom_page_cache_collapse
+    description: "OS kills PostgreSQL or evicts page cache — cold restart kills performance"
+    signal_sequence:
+      - { signal: ram_pressure, trend: rising, threshold: 0.9 }
+      - { signal: swap_usage, trend: rising }
+      - { signal: disk_iops_read, trend: spike }
+    typical_cause: "Other processes consuming RAM; work_mem set too high per connection"
+
+supported_edge_types:
+  - DB_QUERY
+  - REPLICATES_TO
+  - FILE_READ
+  - FILE_WRITE
+
+baseline_config:
+  learning_window_hours: 72
+  time_awareness: [hour, day, week]
+  peer_comparison_enabled: true

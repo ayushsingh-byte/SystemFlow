@@ -53,4 +53,16 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_sims_user      ON simulations(user_id);
 `);
 
+// ─── Migrations ────────────────────────────────────────────────────────────────
+
+const migrations = [
+  `ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE users ADD COLUMN verification_token TEXT`,
+  `ALTER TABLE users ADD COLUMN reset_token TEXT`,
+  `ALTER TABLE users ADD COLUMN reset_token_expires TEXT`,
+];
+for (const sql of migrations) {
+  try { db.exec(sql); } catch (_) { /* column already exists */ }
+}
+
 module.exports = db;

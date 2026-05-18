@@ -1,0 +1,121 @@
+type: linux-host
+family: StatelessHttpWorker   # closest base; represents physical/VM compute layer
+version_range: ">=5.4"        # kernel version
+
+baseline_behavior:
+  primary_bottleneck: disk_io
+  secondary_bottlenecks: [cpu, memory, network]
+  latency_sensitivity: low
+  memory_pattern: "OS page cache grows to fill available RAM — normal and healthy; PSI is the real pressure signal"
+  cpu_pattern: "Multi-core; steal is critical on VMs; iowait indicates disk contention"
+  scale_characteristic: vertical
+  statefulness: stateful
+
+health_signals:
+  critical:
+    - disk_iops_saturation
+    - disk_io_wait
+    - ram_pressure
+    - cpu_steal
+    - load_avg_1
+  warning:
+    - cpu_iowait
+    - bandwidth_saturation
+    - disk_queue_depth
+    - disk_capacity_used
+    - swap_usage
+  informational:
+    - cpu_usage
+    - ram_used
+    - load_avg_5
+    - load_avg_15
+    - bandwidth_in
+    - bandwidth_out
+
+reaction_patterns:
+  - trigger:
+      signal: disk_io_wait
+      op: ">"
+      value: 20   # percent
+    description: "IO wait above 20% — CPU cores idling waiting for disk; all I/O-bound workloads slow"
+    expected_delay_ms: 500
+    confidence: 0.92
+    expected_downstream_effects:
+      - edge_type: FILE_READ
+        affected_signal: disk_latency_read
+        expected_change: increase
+        expected_magnitude: large
+      - edge_type: FILE_WRITE
+        affected_signal: disk_latency_write
+        expected_change: increase
+        expected_magnitude: large
+      - edge_type: DB_QUERY
+        affected_signal: request_latency_p99
+        expected_change: increase
+        expected_magnitude: large
+
+  - trigger:
+      signal: cpu_steal
+      op: ">"
+      value: 0.1   # 10% steal on VM
+    description: "Hypervisor stealing CPU cycles — effective compute reduced; appears as latency on all workloads"
+    expected_delay_ms: 100
+    confidence: 0.88
+    expected_downstream_effects:
+      - edge_type: HTTP_CALL
+        affected_signal: request_latency_p99
+        expected_change: increase
+        expected_magnitude: moderate
+      - edge_type: DB_QUERY
+        affected_signal: request_latency_p99
+        expected_change: increase
+        expected_magnitude: moderate
+
+  - trigger:
+      signal: bandwidth_saturation
+      op: ">"
+      value: 0.9
+    description: "NIC saturated at host level — all network I/O on this host degrades"
+    expected_delay_ms: 100
+    confidence: 0.95
+    expected_downstream_effects:
+      - edge_type: HTTP_CALL
+        affected_signal: network_latency_p99
+        expected_change: spike
+        expected_magnitude: large
+      - edge_type: CACHE_LOOKUP
+        affected_signal: request_latency_p99
+        expected_change: increase
+        expected_magnitude: moderate
+
+failure_signatures:
+  - name: io_saturation
+    description: "Disk fully saturated — all I/O operations queue behind storage bottleneck"
+    signal_sequence:
+      - { signal: disk_iops_saturation, trend: rising, threshold: 0.9 }
+      - { signal: disk_queue_depth, trend: rising }
+      - { signal: disk_io_wait, trend: rising }
+
+  - name: vm_cpu_steal_noisy_neighbor
+    description: "Hypervisor overcommitted — other VMs stealing physical CPU cycles"
+    signal_sequence:
+      - { signal: cpu_steal, trend: rising, threshold: 0.15 }
+      - { signal: load_avg_1, trend: rising }
+      - { signal: request_latency_p99, trend: rising }
+
+  - name: oom_pressure_kill
+    description: "System-wide OOM — kernel kills processes to free memory"
+    signal_sequence:
+      - { signal: ram_pressure, trend: rising, threshold: 0.95 }
+      - { signal: swap_usage, trend: rising }
+    typical_cause: "Memory leak in hosted process; oversized JVM heap; Redis maxmemory not set"
+
+supported_edge_types:
+  - CONTAINER_HOSTS
+  - FILE_READ
+  - FILE_WRITE
+
+baseline_config:
+  learning_window_hours: 72
+  time_awareness: [hour, day, week]
+  peer_comparison_enabled: true

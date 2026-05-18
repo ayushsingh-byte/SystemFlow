@@ -2,6 +2,35 @@
 
 const { useEffect: useEffectA } = React;
 
+// ── Error Boundary ────────────────────────────────────────────────────────────
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, info) {
+    console.error('[SystemFlow] Uncaught error:', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return React.createElement('div', {
+        style: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', background: '#0f1117', color: '#fff', fontFamily: 'Inter,sans-serif', gap: 16 }
+      },
+        React.createElement('h2', { style: { fontSize: 24, margin: 0 } }, 'Something went wrong'),
+        React.createElement('p', { style: { color: '#888', margin: 0 } }, this.state.error?.message || 'Unknown error'),
+        React.createElement('button', {
+          onClick: () => { this.setState({ hasError: false, error: null }); },
+          style: { padding: '8px 20px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14 }
+        }, 'Try Again')
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function App() {
   return (
     <window.AuthProvider>
@@ -24,6 +53,18 @@ function AppInner() {
     const onKey = (e) => {
       const inField = ["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName);
       if (inField) return;
+      // Undo: Ctrl+Z / Cmd+Z
+      if (e.key === "z" && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+        e.preventDefault();
+        store.undo();
+        return;
+      }
+      // Redo: Ctrl+Shift+Z / Cmd+Shift+Z
+      if (e.key === "z" && (e.metaKey || e.ctrlKey) && e.shiftKey) {
+        e.preventDefault();
+        store.redo();
+        return;
+      }
       if (e.key === " ") {
         e.preventDefault();
         const s = store.simConfig.state;
@@ -41,7 +82,7 @@ function AppInner() {
         }
       } else if ((e.key === "s" || e.key === "S") && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
-        try { localStorage.setItem('sf_canvas', JSON.stringify({ nodes: store.nodes, edges: store.edges })); } catch {}
+        store.saveToBackend();
       } else if (e.key === "s" || e.key === "S") {
         store.setSimConfig(c => ({ ...c, state: "idle", _confirmedHighTraffic: false }));
       } else if (e.key === "t" || e.key === "T") {
@@ -62,7 +103,12 @@ function AppInner() {
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [store.simConfig.state, store.nodes.length, store.simConfig.rate, store.simConfig._confirmedHighTraffic]);
+  }, [store.simConfig.state, store.nodes.length, store.simConfig.rate, store.simConfig._confirmedHighTraffic, store.undo, store.redo]);
+
+  // Load canvas from backend on mount
+  useEffectA(() => {
+    store.loadFromBackend();
+  }, []);
 
   // First-run tour
   useEffectA(() => {
@@ -89,4 +135,8 @@ function AppInner() {
 window.App = App;
 
 // mount
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
+);

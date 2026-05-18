@@ -9,6 +9,7 @@ const authLimiter = rateLimit({
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => req.ip,
   message: {
     error: 'Too many authentication attempts, please try again after 15 minutes',
   },
@@ -24,6 +25,7 @@ const apiLimiter = rateLimit({
   max: 100,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => req.ip,
   message: {
     error: 'Too many requests, please try again after 15 minutes',
   },
@@ -39,6 +41,7 @@ const analysisLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => req.ip,
   message: {
     error: 'Too many analysis requests, please try again after 15 minutes',
   },

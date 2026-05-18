@@ -1,0 +1,120 @@
+type: nodejs-app
+family: ApplicationRuntime
+version_range: ">=18"
+
+baseline_behavior:
+  primary_bottleneck: event_loop_lag
+  secondary_bottlenecks: [memory, cpu, connections]
+  latency_sensitivity: high
+  memory_pattern: "V8 heap + off-heap buffers; GC pauses proportional to heap size"
+  cpu_pattern: "Single-threaded event loop; CPU spikes = GC or synchronous I/O blocking loop"
+  scale_characteristic: horizontal
+  statefulness: ephemeral
+
+health_signals:
+  critical:
+    - event_loop_lag
+    - gc_pause_time
+    - request_queue_depth
+    - error_rate_5xx
+    - error_rate_timeout
+  warning:
+    - request_latency_p99
+    - ram_pressure
+    - thread_pool_saturation
+    - connection_pool_saturation
+  informational:
+    - request_rate
+    - cpu_usage
+    - ram_used
+    - active_sessions
+
+reaction_patterns:
+  - trigger:
+      signal: event_loop_lag
+      op: ">"
+      value: 100   # ms
+    description: "Event loop blocked — all incoming requests queue; latency and timeouts spike"
+    expected_delay_ms: 0
+    confidence: 0.99
+    expected_downstream_effects:
+      - edge_type: HTTP_CALL
+        affected_signal: request_latency_p99
+        expected_change: spike
+        expected_magnitude: large
+      - edge_type: HTTP_CALL
+        affected_signal: error_rate_timeout
+        expected_change: increase
+        expected_magnitude: large
+      - edge_type: DB_QUERY
+        affected_signal: request_queue_depth
+        expected_change: increase
+        expected_magnitude: moderate
+
+  - trigger:
+      signal: gc_pause_time
+      op: ">"
+      value: 50   # ms per GC cycle
+    description: "GC stop-the-world pauses block event loop — requests stall during pause"
+    expected_delay_ms: 0
+    confidence: 0.93
+    expected_downstream_effects:
+      - edge_type: HTTP_CALL
+        affected_signal: request_latency_p99
+        expected_change: spike
+        expected_magnitude: moderate
+      - edge_type: HTTP_CALL
+        affected_signal: error_rate_timeout
+        expected_change: increase
+        expected_magnitude: small
+
+  - trigger:
+      signal: request_queue_depth
+      op: ">"
+      value: 500
+    description: "Request queue saturated — shed load or timeout imminent"
+    expected_delay_ms: 100
+    confidence: 0.90
+    expected_downstream_effects:
+      - edge_type: HTTP_CALL
+        affected_signal: error_rate_5xx
+        expected_change: spike
+        expected_magnitude: large
+
+failure_signatures:
+  - name: event_loop_freeze
+    description: "Synchronous operation blocking event loop — all requests stall"
+    signal_sequence:
+      - { signal: event_loop_lag, trend: spike, threshold: 500 }
+      - { signal: request_queue_depth, trend: rising }
+      - { signal: request_latency_p99, trend: spike }
+    typical_cause: "JSON.parse on large payload; sync fs call; tight CPU loop; blocking DB call"
+
+  - name: gc_storm
+    description: "Heap fragmented — GC thrashing causes repeated stop-the-world pauses"
+    signal_sequence:
+      - { signal: gc_pause_time, trend: rising }
+      - { signal: ram_used, trend: rising }
+      - { signal: event_loop_lag, trend: rising }
+    typical_cause: "Memory leak; large object allocation rate exceeds GC throughput"
+
+  - name: connection_pool_exhaustion
+    description: "Upstream DB/Redis connections exhausted — new requests fail immediately"
+    signal_sequence:
+      - { signal: connection_pool_saturation, trend: rising, threshold: 0.95 }
+      - { signal: error_rate_5xx, trend: spike }
+    typical_cause: "Slow downstream (PostgreSQL disk thrash) keeps connections open longer"
+
+supported_edge_types:
+  - HTTP_CALL
+  - GRPC_CALL
+  - DB_QUERY
+  - CACHE_LOOKUP
+  - QUEUE_PUBLISH
+  - QUEUE_CONSUME
+  - DNS_RESOLVE
+
+baseline_config:
+  learning_window_hours: 48
+  time_awareness: [hour, day]
+  peer_comparison_enabled: true

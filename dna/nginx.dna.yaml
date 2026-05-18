@@ -1,0 +1,109 @@
+type: nginx
+family: StatelessHttpWorker
+version_range: ">=1.18"
+
+baseline_behavior:
+  primary_bottleneck: connections
+  secondary_bottlenecks: [bandwidth, cpu]
+  latency_sensitivity: high
+  memory_pattern: "Low and stable — worker processes pre-fork, ~2-4MB per worker"
+  cpu_pattern: "Low under normal load; spikes on SSL handshakes and regex matching"
+  scale_characteristic: horizontal
+  statefulness: stateless
+
+health_signals:
+  critical:
+    - connection_count_active
+    - request_queue_depth
+    - bandwidth_saturation
+    - error_rate_5xx
+    - error_rate_timeout
+  warning:
+    - request_latency_p99
+    - connection_count_waiting
+    - connection_pool_saturation
+    - error_rate_4xx
+  informational:
+    - request_rate
+    - bandwidth_in
+    - bandwidth_out
+    - cpu_usage
+    - ram_used
+
+reaction_patterns:
+  - trigger:
+      signal: bandwidth_saturation
+      op: ">"
+      value: 0.85
+    description: "NIC saturation causes queuing and latency spike for all downstream callers"
+    expected_delay_ms: 50
+    confidence: 0.95
+    expected_downstream_effects:
+      - edge_type: HTTP_CALL
+        affected_signal: request_latency_p99
+        expected_change: spike
+        expected_magnitude: large
+      - edge_type: HTTP_CALL
+        affected_signal: error_rate_timeout
+        expected_change: increase
+        expected_magnitude: moderate
+
+  - trigger:
+      signal: connection_count_active
+      op: ">"
+      value: 0.9   # 90% of worker_connections
+    description: "Connection exhaustion causes 502/504 errors to upstream"
+    expected_delay_ms: 100
+    confidence: 0.92
+    expected_downstream_effects:
+      - edge_type: HTTP_CALL
+        affected_signal: error_rate_5xx
+        expected_change: spike
+        expected_magnitude: large
+
+  - trigger:
+      signal: request_queue_depth
+      op: ">"
+      value: 100
+    description: "Request queue buildup indicates upstream backend saturation"
+    expected_delay_ms: 200
+    confidence: 0.85
+    expected_downstream_effects:
+      - edge_type: HTTP_CALL
+        affected_signal: request_latency_p99
+        expected_change: increase
+        expected_magnitude: large
+
+failure_signatures:
+  - name: connection_exhaustion
+    description: "All worker connections consumed — new connections refused or queued"
+    signal_sequence:
+      - { signal: connection_count_active, trend: rising, threshold: 0.9 }
+      - { signal: error_rate_5xx, trend: spike }
+      - { signal: request_latency_p99, trend: rising }
+    typical_cause: "Upstream backend slow (DB, app) causing connections to pile up"
+
+  - name: bandwidth_flood
+    description: "NIC saturated — all connections degraded regardless of backend health"
+    signal_sequence:
+      - { signal: bandwidth_saturation, trend: rising, threshold: 0.85 }
+      - { signal: network_latency_p99, trend: spike }
+      - { signal: error_rate_timeout, trend: rising }
+    typical_cause: "DDoS, traffic spike, or large file transfer monopolizing NIC"
+
+  - name: upstream_backend_timeout
+    description: "Backend slow — NGINX holds connections open, queue grows"
+    signal_sequence:
+      - { signal: connection_count_waiting, trend: rising }
+      - { signal: request_queue_depth, trend: rising }
+      - { signal: error_rate_timeout, trend: rising }
+    typical_cause: "PostgreSQL or app server degraded — look upstream in causal graph"
+
+supported_edge_types:
+  - LOAD_BALANCES_TO
+  - HTTP_CALL
+
+baseline_config:
+  learning_window_hours: 72
+  time_awareness: [hour, day]
+  peer_comparison_enabled: true

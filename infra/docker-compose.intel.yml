@@ -1,0 +1,116 @@
+version: "3.9"
+
+# SystemFlow Intelligence Platform — dev infrastructure
+# Run: docker compose -f infra/docker-compose.intel.yml up -d
+# Does NOT touch the existing SystemFlow UI/backend (port 4000)
+
+services:
+
+  # ── Time-series DB (VictoriaMetrics) ───────────────────────────────────────
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:v1.99.0
+    ports:
+      - "8428:8428"   # HTTP API + UI
+    volumes:
+      - vm-data:/storage
+    command:
+      - "-storageDataPath=/storage"
+      - "-retentionPeriod=90d"
+      - "-httpListenAddr=:8428"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8428/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Graph DB (Neo4j) ────────────────────────────────────────────────────────
+  neo4j:
+    image: neo4j:5.18-community
+    ports:
+      - "7474:7474"   # HTTP browser
+      - "7687:7687"   # Bolt protocol
+    environment:
+      NEO4J_AUTH: neo4j/systemflow_dev
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_memory_heap_initial__size: 512m
+      NEO4J_dbms_memory_heap_max__size: 1G
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "systemflow_dev", "RETURN 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  # ── Message broker (Kafka + Zookeeper) ─────────────────────────────────────
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zk-data:/var/lib/zookeeper/data
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    depends_on: [zookeeper]
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 24
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  # ── Kafka topic provisioner (runs once) ────────────────────────────────────
+  kafka-setup:
+    image: confluentinc/cp-kafka:7.6.0
+    depends_on: [kafka]
+    entrypoint: ["/bin/bash", "-c"]
+    command: |
+      "
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists \
+        --topic systemflow.signals --partitions 12 --replication-factor 1
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists \
+        --topic systemflow.anomalies --partitions 4 --replication-factor 1
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists \
+        --topic systemflow.causal-events --partitions 4 --replication-factor 1
+      echo 'Topics created.'
+      "
+    restart: "no"
+
+  # ── Mock node (simulates a Linux host emitting all signals) ────────────────
+  mock-linux-host:
+    build:
+      context: ../collector
+      dockerfile: Dockerfile.mock
+    environment:
+      KAFKA_BROKERS: kafka:9092
+      NODE_ID: mock-linux-host-01
+      INTERVAL_SECONDS: "15"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+    profiles: ["mock"]   # only starts with: docker compose --profile mock up
+
+volumes:
+  vm-data:
+  neo4j-data:
+  neo4j-logs:
+  zk-data:
+  kafka-data:

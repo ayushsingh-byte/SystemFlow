@@ -26,4 +26,13 @@ router.get('/me', authMiddleware, authController.me);
 // POST /api/auth/logout (protected)
 router.post('/logout', authMiddleware, authController.logout);
 
+// GET /api/auth/verify-email
+router.get('/verify-email', authController.verifyEmail);
+
+// POST /api/auth/forgot-password
+router.post('/forgot-password', authLimiter, authController.forgotPassword);
+
+// POST /api/auth/reset-password
+router.post('/reset-password', authLimiter, authController.resetPassword);
+
 module.exports = router;

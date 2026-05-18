@@ -6,6 +6,78 @@ const { useState, useEffect, useRef, useMemo, useCallback, createContext, useCon
 function useStoreImpl() {
   const [nodes, setNodes] = useState([]);
   const [edges, setEdges] = useState([]);
+
+  // ── Undo/Redo history ────────────────────────────────────────────────────────
+  // history is an array of { nodes, edges } snapshots; historyIndex points to the current snapshot
+  const history = useRef([{ nodes: [], edges: [] }]);
+  const historyIndex = useRef(0);
+  // Track whether we are restoring (to avoid pushing on undo/redo restores)
+  const isRestoring = useRef(false);
+
+  // Push a snapshot to history; trims forward history and caps at 50 entries
+  const pushHistory = useCallback((ns, es) => {
+    if (isRestoring.current) return;
+    const snap = { nodes: ns, edges: es };
+    // Trim anything after the current index (forward history is discarded on new action)
+    history.current = history.current.slice(0, historyIndex.current + 1);
+    history.current.push(snap);
+    if (history.current.length > 50) {
+      history.current = history.current.slice(history.current.length - 50);
+    }
+    historyIndex.current = history.current.length - 1;
+  }, []);
+
+  // Wrap setNodes so every nodes change pushes history (capture current edges via ref)
+  const edgesRef = useRef([]);
+  useEffect(() => { edgesRef.current = edges; }, [edges]);
+  const nodesRef2 = useRef([]);
+  useEffect(() => { nodesRef2.current = nodes; }, [nodes]);
+
+  const setNodesWithHistory = useCallback((updater) => {
+    setNodes(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      pushHistory(next, edgesRef.current);
+      return next;
+    });
+  }, [pushHistory]);
+
+  const setEdgesWithHistory = useCallback((updater) => {
+    setEdges(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      pushHistory(nodesRef2.current, next);
+      return next;
+    });
+  }, [pushHistory]);
+
+  // Expose canUndo/canRedo as derived values (recomputed on each render via useState trigger)
+  const [historyVersion, setHistoryVersion] = useState(0);
+  // Bump historyVersion after each push/undo/redo so consumers re-render
+  const bumpVersion = useCallback(() => setHistoryVersion(v => v + 1), []);
+
+  const undo = useCallback(() => {
+    if (historyIndex.current <= 0) return;
+    historyIndex.current -= 1;
+    const snap = history.current[historyIndex.current];
+    isRestoring.current = true;
+    setNodes(snap.nodes);
+    setEdges(snap.edges);
+    isRestoring.current = false;
+    bumpVersion();
+  }, [bumpVersion]);
+
+  const redo = useCallback(() => {
+    if (historyIndex.current >= history.current.length - 1) return;
+    historyIndex.current += 1;
+    const snap = history.current[historyIndex.current];
+    isRestoring.current = true;
+    setNodes(snap.nodes);
+    setEdges(snap.edges);
+    isRestoring.current = false;
+    bumpVersion();
+  }, [bumpVersion]);
+
+  const canUndo = historyIndex.current > 0;
+  const canRedo = historyIndex.current < history.current.length - 1;
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [simConfig, setSimConfig] = useState({
     state: "idle",          // idle | running | paused
@@ -41,6 +113,16 @@ function useStoreImpl() {
   const [crashedNodes, setCrashedNodes] = useState({});          // nodeId -> { nodeName, crashedAt }
   const [crashAlerts, setCrashAlerts] = useState([]);            // [{ id, nodeId, nodeName, err, lat, time }]
 
+  // ── Backend project sync ─────────────────────────────────────────────────────
+  const [currentProjectId, setCurrentProjectId] = useState(
+    () => localStorage.getItem('sf_project_id') || null
+  );
+  const [projectName, setProjectNameState] = useState('Untitled project');
+  const [saveStatus, setSaveStatus] = useState('idle'); // idle | saving | saved | error
+  const saveTimerRef = useRef(null);
+  const projectNameRef = useRef('Untitled project');
+  const currentProjectIdRef = useRef(localStorage.getItem('sf_project_id') || null);
+
   // Computed: either live data or historical snapshot when scrubbing
   const displayedMetrics    = playbackTick !== null ? (simulationHistory[playbackTick]?.metrics    ?? metrics)    : metrics;
   const displayedNodeHealth = playbackTick !== null ? (simulationHistory[playbackTick]?.nodeHealth ?? nodeHealth) : nodeHealth;
@@ -62,7 +144,7 @@ function useStoreImpl() {
     const t = window.findNodeType(typeId);
     if (!t) return;
     const id = `n${nextId.current++}`;
-    setNodes(prev => [...prev, {
+    setNodesWithHistory(prev => [...prev, {
       id, type: typeId, x, y,
       label: t.label,
       config: { cpu: 60, memory: 60, maxConn: 1000, timeout: 30, retries: 3 },
@@ -70,25 +152,33 @@ function useStoreImpl() {
     return id;
   };
   const removeNode = (id) => {
-    setNodes(prev => prev.filter(n => n.id !== id));
-    setEdges(prev => prev.filter(e => e.from !== id && e.to !== id));
+    // Remove node and its edges atomically: compute both new arrays, push once
+    const newNodes = nodesRef2.current.filter(n => n.id !== id);
+    const newEdges = edgesRef.current.filter(e => e.from !== id && e.to !== id);
+    isRestoring.current = true;
+    setNodes(newNodes);
+    setEdges(newEdges);
+    isRestoring.current = false;
+    pushHistory(newNodes, newEdges);
+    bumpVersion();
     if (selectedNodeId === id) setSelectedNodeId(null);
   };
   const updateNode = (id, patch) => {
-    setNodes(prev => prev.map(n => n.id === id ? { ...n, ...patch, config: { ...n.config, ...(patch.config || {}) } } : n));
+    setNodesWithHistory(prev => prev.map(n => n.id === id ? { ...n, ...patch, config: { ...n.config, ...(patch.config || {}) } } : n));
   };
   const moveNode = (id, x, y) => {
+    // moveNode is called on every mouse-move; avoid flooding history — use raw setter
     setNodes(prev => prev.map(n => n.id === id ? { ...n, x, y } : n));
   };
   const addEdge = (from, to) => {
     if (from === to) return;
-    setEdges(prev => prev.some(e => e.from === from && e.to === to) ? prev : [...prev, { id: `e${nextId.current++}`, from, to }]);
+    setEdgesWithHistory(prev => prev.some(e => e.from === from && e.to === to) ? prev : [...prev, { id: `e${nextId.current++}`, from, to }]);
   };
   const updateEdge = (id, patch) => {
-    setEdges(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
+    setEdgesWithHistory(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
   };
   const removeEdge = (id) => {
-    setEdges(prev => prev.filter(e => e.id !== id));
+    setEdgesWithHistory(prev => prev.filter(e => e.id !== id));
   };
   const loadTemplate = (tmpl) => {
     const base = nextId.current;
@@ -105,8 +195,12 @@ function useStoreImpl() {
       from: newNodes[a].id, to: newNodes[b].id,
     }));
     nextId.current = base + tmpl.nodes.length + tmpl.edges.length + 1;
+    isRestoring.current = true;
     setNodes(newNodes);
     setEdges(newEdges);
+    isRestoring.current = false;
+    pushHistory(newNodes, newEdges);
+    bumpVersion();
     setSelectedNodeId(null);
   };
 
@@ -115,13 +209,108 @@ function useStoreImpl() {
     if (!ns?.length) return;
     const maxId = Math.max(0, ...ns.map(n => parseInt(n.id.replace(/\D/g, '')) || 0));
     nextId.current = maxId + 1;
+    // resetCanvas is called on initial load; seed history with the loaded state
+    const safeEs = es || [];
+    history.current = [{ nodes: ns, edges: safeEs }];
+    historyIndex.current = 0;
+    isRestoring.current = true;
     setNodes(ns);
-    setEdges(es || []);
+    setEdges(safeEs);
+    isRestoring.current = false;
+    bumpVersion();
     setSelectedNodeId(null);
+  }, [bumpVersion]);
+
+  // Keep refs in sync
+  useEffect(() => { projectNameRef.current = projectName; }, [projectName]);
+  useEffect(() => { currentProjectIdRef.current = currentProjectId; }, [currentProjectId]);
+
+  const saveToBackend = useCallback(async () => {
+    const pid = currentProjectIdRef.current;
+    if (!pid || !window.api) return;
+    setSaveStatus('saving');
+    try {
+      await window.api.projects.update(pid, {
+        nodes: nodesRef2.current,
+        edges: edgesRef.current,
+        name: projectNameRef.current,
+      });
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch {
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    }
+  }, []);
+
+  const loadFromBackend = useCallback(async () => {
+    if (!window.api || !localStorage.getItem('sf_token')) {
+      try {
+        const saved = JSON.parse(localStorage.getItem('sf_canvas') || 'null');
+        if (saved?.nodes?.length) resetCanvas(saved.nodes, saved.edges || []);
+      } catch {}
+      return;
+    }
+    try {
+      const storedId = localStorage.getItem('sf_project_id');
+      if (storedId) {
+        const project = await window.api.projects.get(storedId);
+        if (project?.id) {
+          setProjectNameState(project.name || 'Untitled project');
+          currentProjectIdRef.current = project.id;
+          setCurrentProjectId(project.id);
+          if (project.nodes?.length || project.edges?.length) {
+            resetCanvas(project.nodes || [], project.edges || []);
+          }
+          return;
+        }
+      }
+      const { projects } = await window.api.projects.list();
+      if (projects?.length) {
+        const p = projects[0];
+        localStorage.setItem('sf_project_id', p.id);
+        currentProjectIdRef.current = p.id;
+        setCurrentProjectId(p.id);
+        setProjectNameState(p.name || 'Untitled project');
+        if (p.nodes?.length || p.edges?.length) {
+          resetCanvas(p.nodes || [], p.edges || []);
+        }
+      } else {
+        const p = await window.api.projects.create({ name: 'Untitled project', nodes: [], edges: [] });
+        if (p?.id) {
+          localStorage.setItem('sf_project_id', p.id);
+          currentProjectIdRef.current = p.id;
+          setCurrentProjectId(p.id);
+          setProjectNameState(p.name || 'Untitled project');
+        }
+      }
+    } catch (err) {
+      console.warn('[SystemFlow] Backend unavailable, using localStorage:', err.message);
+      try {
+        const saved = JSON.parse(localStorage.getItem('sf_canvas') || 'null');
+        if (saved?.nodes?.length) resetCanvas(saved.nodes, saved.edges || []);
+      } catch {}
+    }
+  }, [resetCanvas]);
+
+  // Auto-save canvas changes to backend (debounced 2s)
+  useEffect(() => {
+    if (!currentProjectId) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(saveToBackend, 2000);
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  }, [nodes, edges, saveToBackend, currentProjectId]);
+
+  const setProjectName = useCallback(async (name) => {
+    setProjectNameState(name);
+    projectNameRef.current = name;
+    const pid = currentProjectIdRef.current;
+    if (!pid || !window.api) return;
+    try { await window.api.projects.update(pid, { name }); } catch {}
   }, []);
 
   return {
-    nodes, setNodes, edges, setEdges,
+    nodes, setNodes: setNodesWithHistory, edges, setEdges: setEdgesWithHistory,
     selectedNodeId, setSelectedNodeId,
     simConfig, setSimConfig,
     metrics, setMetrics,
@@ -138,6 +327,12 @@ function useStoreImpl() {
     crashAlerts, setCrashAlerts,
     displayedMetrics, displayedNodeHealth,
     addNode, removeNode, updateNode, moveNode, addEdge, updateEdge, removeEdge, loadTemplate, resetCanvas,
+    // Undo/Redo
+    undo, redo, canUndo, canRedo,
+    // Backend project sync
+    currentProjectId, setCurrentProjectId,
+    projectName, setProjectName,
+    saveStatus, saveToBackend, loadFromBackend,
   };
 }
 

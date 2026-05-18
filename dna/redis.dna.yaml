@@ -1,0 +1,104 @@
+type: redis
+family: InMemoryStore
+version_range: ">=6.0"
+
+baseline_behavior:
+  primary_bottleneck: memory
+  secondary_bottlenecks: [network, connections, cpu]
+  latency_sensitivity: critical
+  memory_pattern: "All data in RAM — eviction policy kicks in at maxmemory; fragmentation grows over time"
+  cpu_pattern: "Single-threaded command processing; spikes on KEYS*, SORT, large LRANGE"
+  scale_characteristic: horizontal
+  statefulness: stateful
+
+health_signals:
+  critical:
+    - ram_pressure
+    - connection_pool_saturation
+    - request_latency_p99
+    - error_rate_5xx   # evicted / rejected connections
+  warning:
+    - connection_count_active
+    - bandwidth_saturation
+    - request_queue_depth
+    - ram_used
+  informational:
+    - request_rate
+    - cpu_usage
+    - network_latency_p99
+
+reaction_patterns:
+  - trigger:
+      signal: ram_pressure
+      op: ">"
+      value: 0.9
+    description: "maxmemory hit — evictions begin, cache hit rate collapses, all callers see misses"
+    expected_delay_ms: 50
+    confidence: 0.98
+    expected_downstream_effects:
+      - edge_type: CACHE_LOOKUP
+        affected_signal: request_latency_p99
+        expected_change: spike
+        expected_magnitude: large
+      - edge_type: CACHE_LOOKUP
+        affected_signal: error_rate_5xx
+        expected_change: increase
+        expected_magnitude: moderate
+
+  - trigger:
+      signal: connection_pool_saturation
+      op: ">"
+      value: 0.95
+    description: "maxclients reached — new connections refused with ERR max number of clients reached"
+    expected_delay_ms: 10
+    confidence: 0.97
+    expected_downstream_effects:
+      - edge_type: CACHE_LOOKUP
+        affected_signal: error_rate_5xx
+        expected_change: spike
+        expected_magnitude: large
+
+  - trigger:
+      signal: bandwidth_saturation
+      op: ">"
+      value: 0.8
+    description: "Network saturated — high-throughput Redis (pub/sub or large value reads) floods NIC"
+    expected_delay_ms: 30
+    confidence: 0.88
+    expected_downstream_effects:
+      - edge_type: CACHE_LOOKUP
+        affected_signal: request_latency_p99
+        expected_change: increase
+        expected_magnitude: moderate
+
+failure_signatures:
+  - name: memory_eviction_cascade
+    description: "maxmemory reached, LRU evictions cascade — effective cache becomes cold"
+    signal_sequence:
+      - { signal: ram_used, trend: rising, threshold: 0.95 }
+      - { signal: ram_pressure, trend: rising }
+      - { signal: request_latency_p99, trend: spike }
+    typical_cause: "Unbounded key growth; TTL not set on session keys; memory leak in values"
+
+  - name: connection_flood
+    description: "maxclients exhausted — application gets connection refused errors"
+    signal_sequence:
+      - { signal: connection_count_active, trend: rising, threshold: 0.95 }
+      - { signal: error_rate_5xx, trend: spike }
+    typical_cause: "App not using connection pooler; connection leak on exception paths"
+
+  - name: big_key_network_saturation
+    description: "Large value reads/writes monopolize NIC bandwidth"
+    signal_sequence:
+      - { signal: bandwidth_saturation, trend: rising, threshold: 0.8 }
+      - { signal: request_latency_p99, trend: rising }
+    typical_cause: "Storing large blobs in Redis; LRANGE over huge lists; unsharded pub/sub"
+
+supported_edge_types:
+  - CACHE_LOOKUP
+  - REPLICATES_TO
+
+baseline_config:
+  learning_window_hours: 72
+  time_awareness: [hour, day]
+  peer_comparison_enabled: true

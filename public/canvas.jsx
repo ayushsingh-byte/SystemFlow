@@ -4,6 +4,58 @@ const { useState: useStateC, useRef: useRefC, useEffect: useEffectC, useMemo: us
 
 const API_BASE = 'http://localhost:4000';
 
+// ── Export utilities ──────────────────────────────────────────────────────────
+
+async function exportToPNG() {
+  const canvasEl = document.querySelector('.canvas-area');
+  if (!canvasEl) return;
+
+  const { width, height } = canvasEl.getBoundingClientRect();
+  const clone = canvasEl.cloneNode(true);
+  clone.style.transform = 'none';
+  clone.style.position = 'relative';
+  clone.style.overflow = 'hidden';
+
+  const svgString = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+      <foreignObject width="100%" height="100%">
+        <div xmlns="http://www.w3.org/1999/xhtml">${clone.outerHTML}</div>
+      </foreignObject>
+    </svg>
+  `;
+
+  const blob = new Blob([svgString], { type: 'image/svg+xml' });
+  const url = URL.createObjectURL(blob);
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement('canvas');
+    c.width = width;
+    c.height = height;
+    c.getContext('2d').drawImage(img, 0, 0);
+    const link = document.createElement('a');
+    link.download = 'systemflow-architecture.png';
+    link.href = c.toDataURL('image/png');
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); };
+  img.src = url;
+}
+
+function exportToJSON(nodes, edges) {
+  const data = JSON.stringify({ nodes, edges, exportedAt: new Date().toISOString() }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.download = 'systemflow-architecture.json';
+  link.href = url;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+window.exportToPNG = exportToPNG;
+window.exportToJSON = exportToJSON;
+
 function Canvas() {
   const store = window.useStore();
   const ui    = window.useUI();
@@ -345,6 +397,9 @@ function Canvas() {
             if (btn) { btn.style.color = 'var(--green)'; setTimeout(() => { btn.style.color = ''; }, 1000); }
           } catch { alert('Cloud save failed. Is the backend running?'); }
         }}>{window.SVG.download}</button>
+        <div className="ctrl-divider" />
+        <button title="Export PNG" className="ctrl-btn-text" onClick={() => exportToPNG()} style={{ fontSize: 11, fontWeight: 600 }}>PNG</button>
+        <button title="Export JSON" className="ctrl-btn-text" onClick={() => exportToJSON(nodes, edges)} style={{ fontSize: 11, fontWeight: 600 }}>JSON</button>
       </div>
 
       <div className="minimap">

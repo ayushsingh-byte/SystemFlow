@@ -13,8 +13,8 @@ async function register(req, res) {
 
   try {
     const { email, password, name } = req.body;
-    const { user, token } = await authService.register(email, password, name);
-    return res.status(201).json({ user, token });
+    const { user, token, message } = await authService.register(email, password, name);
+    return res.status(201).json({ user, token, message });
   } catch (err) {
     return res.status(err.status || 500).json({ error: err.message });
   }
@@ -43,7 +43,58 @@ function me(req, res) {
 }
 
 function logout(req, res) {
-  return res.status(200).json({ message: 'Logged out' });
+  try {
+    const result = authService.logout();
+    return res.status(200).json(result);
+  } catch (err) {
+    return res.status(err.status || 500).json({ error: err.message });
+  }
 }
 
-module.exports = { register, registerValidation, login, loginValidation, me, logout };
+async function verifyEmail(req, res) {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ error: 'Verification token is required' });
+    const result = authService.verifyEmail(token);
+    return res.status(200).json(result);
+  } catch (err) {
+    return res.status(err.status || 500).json({ error: err.message });
+  }
+}
+
+async function forgotPassword(req, res) {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    const result = await authService.forgotPassword(email);
+    return res.status(200).json(result);
+  } catch (err) {
+    return res.status(err.status || 500).json({ error: err.message });
+  }
+}
+
+async function resetPassword(req, res) {
+  try {
+    const { token, password } = req.body;
+    if (!token) return res.status(400).json({ error: 'Reset token is required' });
+    if (!password || password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+    const result = await authService.resetPassword(token, password);
+    return res.status(200).json(result);
+  } catch (err) {
+    return res.status(err.status || 500).json({ error: err.message });
+  }
+}
+
+module.exports = {
+  register,
+  registerValidation,
+  login,
+  loginValidation,
+  me,
+  logout,
+  verifyEmail,
+  forgotPassword,
+  resetPassword,
+};

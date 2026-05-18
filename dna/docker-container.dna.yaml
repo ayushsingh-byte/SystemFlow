@@ -1,0 +1,77 @@
+type: docker-container
+family: ContainerOrchestrator
+version_range: ">=20"
+
+baseline_behavior:
+  primary_bottleneck: cpu
+  secondary_bottlenecks: [memory, network, disk]
+  latency_sensitivity: medium
+  memory_pattern: "cgroup memory limit enforced; OOM kill if exceeded; no swap by default"
+  cpu_pattern: "CPU shares/quota enforced — throttling appears as cpu_steal on the process"
+  scale_characteristic: horizontal
+  statefulness: ephemeral
+
+health_signals:
+  critical:
+    - ram_pressure
+    - cpu_usage
+    - cpu_steal       # CPU throttling looks like steal inside container
+  warning:
+    - bandwidth_saturation
+    - disk_iops_saturation
+    - connection_count_active
+  informational:
+    - request_rate
+    - disk_capacity_used
+
+reaction_patterns:
+  - trigger:
+      signal: ram_pressure
+      op: ">"
+      value: 0.95
+    description: "OOM kill imminent — container process will be terminated by kernel"
+    expected_delay_ms: 0
+    confidence: 0.98
+    expected_downstream_effects:
+      - edge_type: HTTP_CALL
+        affected_signal: error_rate_5xx
+        expected_change: spike
+        expected_magnitude: large
+
+  - trigger:
+      signal: cpu_steal
+      op: ">"
+      value: 0.3
+    description: "CPU throttled by cgroup quota — application sees latency even when CPU looks idle"
+    expected_delay_ms: 50
+    confidence: 0.90
+    expected_downstream_effects:
+      - edge_type: HTTP_CALL
+        affected_signal: request_latency_p99
+        expected_change: increase
+        expected_magnitude: moderate
+
+failure_signatures:
+  - name: oom_kill
+    description: "Container OOM killed by kernel — process restarts, in-flight requests lost"
+    signal_sequence:
+      - { signal: ram_pressure, trend: rising, threshold: 0.95 }
+      - { signal: ram_used, trend: spike }
+      - { signal: error_rate_5xx, trend: spike }
+
+  - name: cpu_throttle
+    description: "cgroup CPU quota exhausted — container throttled despite host having idle cores"
+    signal_sequence:
+      - { signal: cpu_steal, trend: rising, threshold: 0.25 }
+      - { signal: request_latency_p99, trend: rising }
+
+supported_edge_types:
+  - HTTP_CALL
+  - CONTAINER_HOSTS
+  - DB_QUERY
+  - CACHE_LOOKUP
+
+baseline_config:
+  learning_window_hours: 24
+  time_awareness: [hour]
+  peer_comparison_enabled: true

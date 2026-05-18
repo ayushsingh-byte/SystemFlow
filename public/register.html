@@ -480,7 +480,14 @@
         localStorage.setItem('sf_current_user', JSON.stringify({
           id: u.id, email: u.email, name: u.name, initials, avatar: null,
         }));
-        window.location.href = '/SystemFlow.html';
+        setLoading(false);
+        const errEl = document.getElementById('error');
+        errEl.style.background = 'rgba(34,197,94,0.13)';
+        errEl.style.borderColor = 'rgba(34,197,94,0.3)';
+        errEl.style.color = '#22c55e';
+        errEl.textContent = 'Account created! Check server console for email verification link.';
+        errEl.classList.add('show');
+        setTimeout(() => { window.location.href = '/SystemFlow.html'; }, 2000);
         return;
       }
       if (resp.status === 409) {

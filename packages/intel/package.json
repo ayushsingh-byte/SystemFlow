@@ -1,0 +1,21 @@
+{
+  "name": "@systemflow/intel",
+  "version": "0.1.0",
+  "description": "SystemFlow intelligence layer — typed nodes, DNA, graph",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "neo4j-driver": "^5.18.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0"
+  }
+}

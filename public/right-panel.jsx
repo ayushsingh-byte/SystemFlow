@@ -616,11 +616,34 @@ function RagTab() {
     setInput("");
     setMessages(m => [...m, { id: Date.now(), role: "user", text: q }]);
     setThinking(true);
-    await new Promise(r => setTimeout(r, 350 + Math.random() * 350));
-    const findings = window.runAdvisor(nodes, edges, metrics, simConfig);
-    const reply = ragRespond(q.toLowerCase(), nodes, edges, metrics, findings, simConfig);
-    setMessages(m => [...m, { id: Date.now() + 1, role: "ai", text: reply }]);
-    setThinking(false);
+
+    try {
+      const user = JSON.parse(localStorage.getItem('sf_current_user') || '{}');
+      const token = user.token || '';
+
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          question: q,
+          context: { nodes, edges, metrics, simConfig },
+        }),
+      });
+
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const data = await res.json();
+      setMessages(m => [...m, { id: Date.now() + 1, role: "ai", text: data.reply }]);
+    } catch (err) {
+      // Fallback to local ragRespond if API fails
+      const findings = window.runAdvisor(nodes, edges, metrics, simConfig);
+      const reply = ragRespond(q.toLowerCase(), nodes, edges, metrics, findings, simConfig);
+      setMessages(m => [...m, { id: Date.now() + 1, role: "ai", text: reply + "\n\n_(AI service unavailable — using local analysis)_" }]);
+    } finally {
+      setThinking(false);
+    }
   };
 
   return (

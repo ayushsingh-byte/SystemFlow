@@ -2,8 +2,49 @@
 
 const { useState: useStateH, useRef: useRefH, useEffect: useEffectH } = React;
 
+function ProjectNameInput({ name, onSave }) {
+  const [editing, setEditing] = useStateH(false);
+  const [val, setVal] = useStateH(name);
+  const inputRef = useRefH();
+
+  useEffectH(() => { setVal(name); }, [name]);
+  useEffectH(() => { if (editing) inputRef.current?.select(); }, [editing]);
+
+  const commit = () => {
+    const trimmed = val.trim() || 'Untitled project';
+    setVal(trimmed);
+    setEditing(false);
+    onSave(trimmed);
+  };
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        className="project-name-edit"
+        value={val}
+        onChange={e => setVal(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') { setVal(name); setEditing(false); } }}
+        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--cyan)', borderRadius: 6, padding: '2px 8px', color: 'var(--text)', font: '600 13px/1 var(--sans)', outline: 'none', width: 160 }}
+      />
+    );
+  }
+  return (
+    <span
+      title="Click to rename"
+      onClick={() => setEditing(true)}
+      style={{ font: '600 13px/1 var(--sans)', color: 'var(--text-sec)', cursor: 'pointer', padding: '2px 4px', borderRadius: 4, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-block' }}
+      onMouseEnter={e => e.target.style.color = 'var(--text)'}
+      onMouseLeave={e => e.target.style.color = 'var(--text-sec)'}
+    >
+      {name}
+    </span>
+  );
+}
+
 function Header() {
-  const { nodes, edges, simConfig, metrics } = window.useStore();
+  const { nodes, edges, simConfig, metrics, projectName, saveStatus, saveToBackend, setProjectName } = window.useStore();
   const ui = window.useUI();
   const auth = window.useAuth();
   const running = simConfig.state === "running";
@@ -19,6 +60,20 @@ function Header() {
         </div>
         <div className="brand-name">System<span className="accent">Flow</span></div>
       </div>
+
+      <div className="header-divider" />
+
+      <ProjectNameInput name={projectName} onSave={setProjectName} />
+
+      {saveStatus === 'saving' && (
+        <span style={{ font: '500 11px/1 var(--mono)', color: 'var(--text-muted)', marginLeft: 8 }}>saving…</span>
+      )}
+      {saveStatus === 'saved' && (
+        <span style={{ font: '500 11px/1 var(--mono)', color: 'var(--green)', marginLeft: 8 }}>saved ✓</span>
+      )}
+      {saveStatus === 'error' && (
+        <span style={{ font: '500 11px/1 var(--mono)', color: 'var(--red)', marginLeft: 8 }}>save failed</span>
+      )}
 
       <div className="header-divider" />
 
@@ -47,13 +102,7 @@ function Header() {
       {!showLive && <div style={{ flex: 1 }} />}
 
       <div className="header-right">
-        <button className="icon-btn" title="Save canvas (⌘S)" onClick={() => {
-          const store = window.useStore();
-          const data = { nodes: store.nodes, edges: store.edges };
-          localStorage.setItem('sf_canvas', JSON.stringify(data));
-          const btn = document.activeElement;
-          if (btn) { btn.style.color = 'var(--green)'; setTimeout(() => { btn.style.color = ''; }, 800); }
-        }}>{window.SVG.download}</button>
+        <button className="icon-btn" title="Save project (⌘S)" onClick={saveToBackend}>{window.SVG.download}</button>
         <button className="icon-btn" title="Toggle accent theme" onClick={() => {
           const root = document.documentElement;
           const current = root.style.getPropertyValue('--cyan') || '#38bdf8';

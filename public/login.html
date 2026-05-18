@@ -336,6 +336,38 @@
     .divider-line { flex: 1; height: 1px; background: var(--border); }
     .divider-text { font-size: 11px; color: var(--text-muted); }
 
+    /* success message */
+    .success-msg {
+      display: none;
+      background: rgba(34,197,94,0.13);
+      border: 1px solid rgba(34,197,94,0.3);
+      border-radius: 8px;
+      padding: 10px 13px;
+      font-size: 13px;
+      color: var(--green);
+      margin-bottom: 18px;
+    }
+    .success-msg.show { display: block; }
+
+    /* forgot password panel */
+    .forgot-panel { display: none; }
+    .forgot-panel.show { display: block; }
+    .login-panel { display: block; }
+    .login-panel.hide { display: none; }
+
+    .back-link {
+      background: none;
+      border: none;
+      color: var(--cyan);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 0;
+      margin-bottom: 20px;
+      font-family: var(--sans);
+    }
+    .back-link:hover { text-decoration: underline; }
+
     /* responsive */
     @media (max-width: 768px) {
       .brand-panel { display: none; }
@@ -484,42 +516,78 @@
   <!-- ── Right form panel ── -->
   <div class="form-panel">
     <div class="form-card">
-      <div class="form-title">Welcome back</div>
-      <div class="form-sub">Sign in to your workspace</div>
 
-      <div id="error" class="error-msg"></div>
+      <!-- ── Login panel ── -->
+      <div class="login-panel" id="login-panel">
+        <div class="form-title">Welcome back</div>
+        <div class="form-sub">Sign in to your workspace</div>
 
-      <div class="field">
-        <label for="email">Email address</label>
-        <input type="email" id="email" placeholder="you@example.com" autocomplete="email"/>
-      </div>
-      <div class="field">
-        <label for="password">Password</label>
-        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
-      </div>
+        <div id="error" class="error-msg"></div>
 
-      <button class="btn-submit" id="submit-btn" onclick="handleLogin()">
-        Sign in
-      </button>
-
-      <div class="divider">
-        <div class="divider-line"></div>
-        <span class="divider-text">or</span>
-        <div class="divider-line"></div>
-      </div>
-
-      <div class="form-footer">
-        No account? <a href="/register.html">Create one free</a>
-      </div>
-
-      <div class="demo-card">
-        <div class="demo-label">Demo credentials</div>
-        <div class="demo-creds">
-          demo@systemflow.dev<br>
-          <span>password: demo123</span>
+        <div class="field">
+          <label for="email">Email address</label>
+          <input type="email" id="email" placeholder="you@example.com" autocomplete="email"/>
         </div>
-        <button class="demo-fill" onclick="fillDemo()">↗ Fill demo credentials</button>
+        <div class="field">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
+        </div>
+
+        <button class="btn-submit" id="submit-btn" onclick="handleLogin()">
+          Sign in
+        </button>
+
+        <div style="text-align:center; margin-top:12px;">
+          <a href="#" onclick="showForgot(); return false;" style="font-size:12px; color:var(--text-muted); text-decoration:none;">
+            Forgot password?
+          </a>
+        </div>
+
+        <div class="divider">
+          <div class="divider-line"></div>
+          <span class="divider-text">or</span>
+          <div class="divider-line"></div>
+        </div>
+
+        <div class="form-footer">
+          No account? <a href="/register.html">Create one free</a>
+        </div>
+
+        <div class="demo-card">
+          <div class="demo-label">Demo credentials</div>
+          <div class="demo-creds">
+            demo@systemflow.dev<br>
+            <span>password: demo123</span>
+          </div>
+          <button class="demo-fill" onclick="fillDemo()">↗ Fill demo credentials</button>
+        </div>
       </div>
+
+      <!-- ── Forgot password panel ── -->
+      <div class="forgot-panel" id="forgot-panel">
+        <button class="back-link" onclick="showLogin()">← Back to sign in</button>
+        <div class="form-title">Reset password</div>
+        <div class="form-sub">Enter your email and we'll send reset instructions.</div>
+
+        <div id="forgot-error" class="error-msg"></div>
+        <div id="forgot-success" class="success-msg"></div>
+
+        <div class="field">
+          <label for="forgot-email">Email address</label>
+          <input type="email" id="forgot-email" placeholder="you@example.com" autocomplete="email"/>
+        </div>
+
+        <button class="btn-submit" id="forgot-btn" onclick="handleForgotPassword()">
+          Send reset link
+        </button>
+
+        <div style="text-align:center; margin-top:16px;">
+          <a href="#" onclick="showLogin(); return false;" style="font-size:12px; color:var(--text-muted); text-decoration:none;">
+            Back to sign in
+          </a>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -617,9 +685,67 @@
     window.location.href = '/SystemFlow.html';
   }
 
+  function showForgot() {
+    document.getElementById('login-panel').classList.add('hide');
+    document.getElementById('forgot-panel').classList.add('show');
+    document.getElementById('forgot-error').classList.remove('show');
+    document.getElementById('forgot-success').classList.remove('show');
+    document.getElementById('forgot-email').value = '';
+  }
+
+  function showLogin() {
+    document.getElementById('forgot-panel').classList.remove('show');
+    document.getElementById('login-panel').classList.remove('hide');
+  }
+
+  async function handleForgotPassword() {
+    const errorEl = document.getElementById('forgot-error');
+    const successEl = document.getElementById('forgot-success');
+    errorEl.classList.remove('show');
+    successEl.classList.remove('show');
+
+    const email = document.getElementById('forgot-email').value.trim().toLowerCase();
+    if (!email) {
+      errorEl.textContent = 'Enter your email address.';
+      errorEl.classList.add('show');
+      return;
+    }
+
+    const btn = document.getElementById('forgot-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Sending…';
+
+    try {
+      const resp = await fetch('http://localhost:4000/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await resp.json().catch(() => ({}));
+      btn.disabled = false;
+      btn.innerHTML = 'Send reset link';
+      if (resp.ok) {
+        successEl.textContent = data.message || 'If that email exists, a reset link has been sent.';
+        successEl.classList.add('show');
+      } else {
+        errorEl.textContent = data.error || 'Something went wrong. Please try again.';
+        errorEl.classList.add('show');
+      }
+    } catch (_) {
+      btn.disabled = false;
+      btn.innerHTML = 'Send reset link';
+      errorEl.textContent = 'Server unavailable. Please try again later.';
+      errorEl.classList.add('show');
+    }
+  }
+
   // Enter key submit
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') handleLogin();
+    const forgotVisible = document.getElementById('forgot-panel').classList.contains('show');
+    if (e.key === 'Enter') {
+      if (forgotVisible) handleForgotPassword();
+      else handleLogin();
+    }
   });
 </script>
 </body>
