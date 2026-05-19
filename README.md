@@ -1,117 +1,175 @@
-# SystemFlow
+```
+███████╗██╗      ██████╗ ██╗    ██╗██████╗  █████╗
+██╔════╝██║     ██╔═══██╗██║    ██║██╔══██╗██╔══██╗
+█████╗  ██║     ██║   ██║██║ █╗ ██║██████╔╝███████║
+██╔══╝  ██║     ██║   ██║██║███╗██║██╔══██╗██╔══██║
+██║     ███████╗╚██████╔╝╚███╔███╔╝██║  ██║██║  ██║
+╚═╝     ╚══════╝ ╚═════╝  ╚══╝╚══╝ ╚═╝  ╚═╝╚═╝  ╚═╝
+```
 
-SystemFlow is a visual system-design simulator for distributed architectures.
+> **Design distributed systems visually. Simulate chaos. Ship with confidence.**
 
-It is like a mix of Figma for architecture diagrams, a ReactFlow canvas, a load-testing simulator, and a system-design advisor. You can design a backend or cloud architecture, configure how each part behaves, and then pressure-test the system visually before building it for real.
+---
 
-## What It Does
+## What is Flowra?
 
-SystemFlow lets users:
+Flowra is a distributed systems design and simulation platform. Think **Figma for architecture diagrams** — but the canvas runs your system, breaks it, and tells you what will fail in production before you ship.
 
-- Drag and drop architecture nodes such as users, API gateways, load balancers, services, databases, queues, caches, CDNs, cloud services, security tools, and observability tools.
-- Connect nodes into a full distributed-system topology.
-- Configure each node's latency, capacity, failure rate, timeout, retries, queue size, cache hit rate, and related runtime behavior.
-- Run simulated traffic through the architecture.
-- Watch live metrics such as latency, throughput, error rate, overloaded nodes, failed requests, request paths, and bottlenecks.
-- Load production-style templates for systems like e-commerce, real-time chat, video streaming, fintech, gaming backends, IoT pipelines, SaaS platforms, and search engines.
-- Run stress tests, spike tests, chaos tests, SLA validation, failover tests, and other traffic scenarios.
-- Use the architecture advisor to reason about reliability, scalability, cost, bottlenecks, and missing infrastructure pieces.
+You drag nodes. You wire topology. You fire synthetic traffic. You watch it break.
 
-## Simple Pitch
+Then you fix it.
 
-SystemFlow helps you design a backend or cloud architecture and then visually pressure-test it before building it for real.
+---
 
-It can be used for system-design learning, engineering demos, interview preparation, architecture planning, and showing why a design breaks under load.
+## Core Capabilities
 
-## Current Shape
+| Capability | What it does |
+|---|---|
+| **Visual Canvas** | 108 node types — databases, queues, AI endpoints, service meshes, CDNs, load balancers |
+| **Simulation Engine** | Up to 1M synthetic req/sec, real-time latency + throughput metrics |
+| **Chaos Testing** | 12 scenarios — node failures, network partitions, traffic spikes, cold starts |
+| **AI Advisor** | Continuous topology analysis — flags SPOFs, over-provisioned paths, bottlenecks |
+| **Precision Models** | DB replication lag, cache eviction pressure, queue backpressure, autoscale latency |
+| **Architecture Templates** | E-commerce, real-time chat, fintech, gaming, IoT, SaaS, video streaming, search |
 
-The project currently has:
+---
 
-- A Next.js frontend with a visual ReactFlow canvas.
-- A client-side simulation engine for traffic, latency, failures, retries, queues, caches, circuit breakers, and overload behavior.
-- Built-in architecture templates and node presets.
-- Local browser-based authentication and saved canvas state.
-- An Express backend with SQLite support for users, projects, simulations, analysis routes, and WebSocket support.
+## Stack
 
-The frontend is the most complete part of the app today. The backend exists, but the active UI is still mostly wired to browser-local state rather than the backend API.
+```
+Frontend          Backend           Infra
+─────────         ────────          ─────
+Next.js 16        Express           SQLite (better-sqlite3)
+React 19          WebSockets        JWT auth
+TypeScript        REST API          bcrypt
+ReactFlow                           nodemailer
+Zustand
+Recharts
+Framer Motion
+Three.js          Landing
+                  ────────
+                  Custom HTML/CSS/JS
+                  Three.js network topology
+                  CommitMono typeface
+```
 
-## Tech Stack
+---
 
-- Next.js
-- React
-- TypeScript
-- ReactFlow
-- Zustand
-- Recharts
-- Framer Motion
-- Express
-- SQLite via `better-sqlite3`
-- WebSockets
+## Get Running
 
-## Getting Started
-
-Install frontend dependencies:
+**One command — runs frontend + backend concurrently:**
 
 ```bash
 npm install
+npm run go
 ```
 
-Run the frontend development server:
+| Service | URL |
+|---|---|
+| Landing page | `http://localhost:3000` |
+| App canvas | `http://localhost:3000/SystemFlow.html` |
+| API | `http://localhost:4000` |
+
+---
+
+**Or run separately:**
 
 ```bash
+# Frontend only
 npm run dev
-```
 
-Open:
+# Backend only
+npm run backend
 
-```text
-http://localhost:3000
-```
-
-Build the frontend:
-
-```bash
+# Build
 npm run build
 ```
 
-## Backend
+---
 
-The backend lives in `backend/`.
+## Project Structure
 
-Install backend dependencies:
+```
+flowra/
+├── app/                    Next.js app router
+├── public/
+│   ├── SystemFlow.html     Main app shell
+│   ├── canvas.jsx          ReactFlow canvas + pan/zoom
+│   ├── simulation.jsx      Traffic simulation engine
+│   ├── store.jsx           Global state (Zustand-like)
+│   ├── left-panel.jsx      Node palette (108 types)
+│   ├── right-panel.jsx     Config + metrics + collab
+│   ├── bottom-panel.jsx    Scenario runner + logs
+│   ├── header.jsx          Top bar + export
+│   ├── modals.jsx          Onboarding + pro upgrade
+│   ├── data.jsx            Node definitions + icons
+│   ├── api.js              API client (JWT-aware)
+│   ├── login.html          Auth — Three.js split layout
+│   └── register.html       Auth — Three.js split layout
+├── backend/
+│   ├── server.js           Express + WebSocket
+│   ├── routes/             auth, projects, simulations
+│   └── data/               SQLite db files (gitignored)
+├── Flowra/
+│   └── index.html          Landing page (Three.js)
+└── next.config.ts          Redirects / → /landing.html
+```
+
+---
+
+## Auth Flow
+
+```
+localhost:3000
+    │
+    ▼  307 redirect
+/landing.html  (Three.js landing)
+    │
+    ▼  GET STARTED
+/login.html or /register.html
+    │
+    ▼  POST localhost:4000/api/auth/*
+/SystemFlow.html  (main canvas app)
+```
+
+Falls back to `localStorage` auth if backend is down.
+
+---
+
+## Environment
 
 ```bash
-cd backend
-npm install
+# backend/.env (create this)
+PORT=4000
+JWT_SECRET=your_secret_here
+EMAIL_USER=your@email.com
+EMAIL_PASS=your_app_password
 ```
 
-Run the backend:
+---
+
+## Scripts
 
 ```bash
-npm run dev
+npm run go          # start everything (frontend + backend)
+npm run dev         # Next.js dev server only
+npm run backend     # Express backend only
+npm run build       # production build
+npm run lint        # ESLint
 ```
 
-By default, the backend listens on:
+---
 
-```text
-http://localhost:4000
-```
+## Status
 
-## Useful Scripts
+> Alpha. Canvas and simulation engine are production-quality. Backend API is partially wired — most state lives client-side today. Auth, project persistence, and WebSocket collab are in progress.
 
-Frontend:
+---
 
-```bash
-npm run dev
-npm run build
-npm run start
-npm run lint
-```
+<div align="center">
 
-Backend:
+**Built for engineers who want to know their system won't fail before they ship it.**
 
-```bash
-cd backend
-npm run dev
-npm start
-```
+[Get Started](http://localhost:3000) · [Log In](http://localhost:3000/login.html)
+
+</div>
