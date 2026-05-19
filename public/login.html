@@ -1,752 +1,386 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sign In — SystemFlow</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Sign In — Flowra</title>
   <style>
-    :root {
-      --bg: #06070d;
-      --bg2: #0a0c14;
-      --surface: rgba(20, 22, 32, 0.85);
-      --surface-solid: #14161f;
-      --surface2: rgba(30, 33, 46, 0.9);
-      --border: #1f2230;
-      --border2: #2a2e3f;
-      --text: #f4f5fa;
-      --text-sec: #b0b5c7;
-      --text-muted: #6e7388;
-      --cyan: #38bdf8;
-      --cyan-dim: rgba(56,189,248,0.13);
-      --cyan-glow: rgba(56,189,248,0.35);
-      --indigo: #818cf8;
-      --indigo-dim: rgba(129,140,248,0.13);
-      --green: #22c55e;
-      --green-dim: rgba(34,197,94,0.13);
-      --red: #ef4444;
-      --red-dim: rgba(239,68,68,0.15);
-      --amber: #fbbf24;
-      --mono: "JetBrains Mono", ui-monospace, monospace;
-      --sans: "Inter", -apple-system, sans-serif;
-      --r: 12px;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body {
-      height: 100%; width: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--sans);
-      font-size: 14px;
-      overflow: hidden;
-      -webkit-font-smoothing: antialiased;
-    }
+    @font-face{font-family:'CM';src:url('/fonts/commit-mono.otf') format('opentype');font-display:swap;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{--bg:#050509;--acc:#D5E0FF;--dim:rgba(213,224,255,.62);--mut:rgba(213,224,255,.36);--fnt:rgba(213,224,255,.055);--bdr:rgba(213,224,255,.1);--fcs:rgba(213,224,255,.4);--mono:'CM','JetBrains Mono',monospace;}
+    html,body{height:100%;overflow:hidden;background:var(--bg);font-family:var(--mono);color:var(--acc);}
+    #c{position:fixed;inset:0;z-index:0;}
+    #sc{position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.05) 2px,rgba(0,0,0,.05) 4px);pointer-events:none;z-index:1;}
+    #vg{position:fixed;inset:0;background:radial-gradient(ellipse 90% 100% at 30% 50%,transparent 20%,rgba(5,5,9,.55) 100%);pointer-events:none;z-index:2;}
 
-    /* ── Layout ── */
-    .auth-shell {
-      display: flex;
-      height: 100vh;
-      width: 100vw;
-    }
+    /* logo */
+    .logo{position:fixed;top:24px;left:28px;display:flex;align-items:center;gap:10px;text-decoration:none;z-index:30;}
+    .lm{width:26px;height:26px;border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;letter-spacing:.06em;}
+    .lt{font-size:9px;font-weight:700;letter-spacing:.28em;color:var(--dim);}
 
-    /* ── Left brand panel ── */
-    .brand-panel {
-      width: 480px;
-      flex-shrink: 0;
-      background: linear-gradient(135deg, #06070d 0%, #0d0f1c 50%, #06080f 100%);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      padding: 48px 52px;
-      position: relative;
-      overflow: hidden;
-    }
-    .brand-panel::before {
-      content: "";
-      position: absolute;
-      top: -120px; left: -80px;
-      width: 400px; height: 400px;
-      background: radial-gradient(circle, rgba(56,189,248,0.07) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .brand-panel::after {
-      content: "";
-      position: absolute;
-      bottom: -100px; right: -60px;
-      width: 300px; height: 300px;
-      background: radial-gradient(circle, rgba(129,140,248,0.06) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .brand-logo {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 56px;
-      position: relative;
-      z-index: 1;
-    }
-    .brand-icon {
-      width: 38px; height: 38px;
-      background: rgba(56,189,248,0.1);
-      border: 1px solid rgba(56,189,248,0.3);
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .brand-icon svg { width: 20px; height: 20px; }
-    .brand-wordmark {
-      font-size: 18px; font-weight: 700;
-      letter-spacing: -0.02em;
-      color: var(--text);
-    }
-    .brand-wordmark span { color: var(--cyan); }
+    /* ── LEFT INFO PANEL ── */
+    .lp{position:fixed;left:0;top:0;width:55%;height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:28px 52px 36px;z-index:10;pointer-events:none;}
+    .lp-top{margin-top:88px;}
+    .lp-ey{font-size:8px;letter-spacing:.34em;color:rgba(213,224,255,.26);margin-bottom:20px;display:flex;align-items:center;gap:12px;}
+    .lp-ey::after{content:'';flex:0 0 26px;height:1px;background:rgba(213,224,255,.16);}
+    .lp-h1{font-size:clamp(34px,4.2vw,58px);font-weight:700;letter-spacing:-.028em;line-height:1.05;color:var(--acc);margin-bottom:20px;}
+    .lp-sub{font-size:11.5px;letter-spacing:.04em;color:rgba(213,224,255,.38);line-height:1.8;max-width:310px;margin-bottom:32px;}
+    .lp-feats{list-style:none;display:flex;flex-direction:column;gap:11px;}
+    .lp-feats li{font-size:10px;letter-spacing:.1em;color:rgba(213,224,255,.36);display:flex;align-items:center;gap:10px;}
+    .lp-feats li span{color:rgba(213,224,255,.55);font-size:14px;line-height:1;width:18px;text-align:center;}
 
-    .brand-headline {
-      font-size: 34px; font-weight: 800;
-      line-height: 1.15; letter-spacing: -0.03em;
-      color: var(--text);
-      margin-bottom: 16px;
-      position: relative; z-index: 1;
-    }
-    .brand-headline em {
-      font-style: normal;
-      background: linear-gradient(135deg, var(--cyan) 0%, var(--indigo) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .brand-sub {
-      font-size: 14px; line-height: 1.65;
-      color: var(--text-muted);
-      max-width: 340px;
-      margin-bottom: 48px;
-      position: relative; z-index: 1;
-    }
-
-    /* ── Animated SVG diagram ── */
-    .diagram-wrap {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-      z-index: 1;
-    }
-    .diagram-wrap svg {
-      width: 100%;
-      max-width: 300px;
-    }
-
-    /* node pulse */
-    @keyframes nodePulse {
-      0%, 100% { opacity: 0.7; }
-      50% { opacity: 1; }
-    }
-    .n-pulse { animation: nodePulse 2.4s ease-in-out infinite; }
-    .n-pulse-2 { animation: nodePulse 2.4s ease-in-out infinite 0.8s; }
-    .n-pulse-3 { animation: nodePulse 2.4s ease-in-out infinite 1.6s; }
-
-    /* Stats row */
-    .stats-row {
-      display: flex;
-      gap: 32px;
-      position: relative;
-      z-index: 1;
-    }
-    .stat-item {}
-    .stat-val {
-      font-family: var(--mono);
-      font-size: 22px; font-weight: 700;
-      color: var(--text);
-      letter-spacing: -0.02em;
-    }
-    .stat-label {
-      font-size: 11px;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    /* version chip */
-    .version-tag {
-      position: absolute;
-      bottom: 28px; left: 52px;
-      font-family: var(--mono);
-      font-size: 10px;
-      color: var(--border2);
-      letter-spacing: 0.04em;
-    }
-
-    /* ── Right form panel ── */
-    .form-panel {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--bg);
-      padding: 32px;
-    }
-    .form-card {
-      width: 100%;
-      max-width: 400px;
-      background: var(--surface);
-      border: 1px solid var(--border2);
-      border-radius: 20px;
-      padding: 40px 40px 36px;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      box-shadow: 0 4px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03);
-    }
-    .form-title {
-      font-size: 24px; font-weight: 700;
-      letter-spacing: -0.02em;
-      color: var(--text);
-      margin-bottom: 4px;
-    }
-    .form-sub {
-      font-size: 13px;
-      color: var(--text-muted);
-      margin-bottom: 32px;
-    }
-
-    /* form fields */
-    .field { margin-bottom: 18px; }
-    .field label {
-      display: block;
-      font-size: 12px; font-weight: 600;
-      color: var(--text-sec);
-      margin-bottom: 7px;
-      letter-spacing: 0.01em;
-    }
-    .field input {
-      width: 100%;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--border2);
-      border-radius: 10px;
-      padding: 11px 14px;
-      font-family: var(--sans);
-      font-size: 14px;
-      color: var(--text);
-      outline: none;
-      transition: border-color 0.18s, box-shadow 0.18s;
-    }
-    .field input::placeholder { color: var(--text-muted); }
-    .field input:focus {
-      border-color: var(--cyan);
-      box-shadow: 0 0 0 3px var(--cyan-dim);
-    }
-    .field input:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    /* error */
-    .error-msg {
-      display: none;
-      background: var(--red-dim);
-      border: 1px solid rgba(239,68,68,0.3);
-      border-radius: 8px;
-      padding: 10px 13px;
-      font-size: 13px;
-      color: var(--red);
-      margin-bottom: 18px;
-    }
-    .error-msg.show { display: block; }
-
-    /* submit btn */
-    .btn-submit {
-      width: 100%;
-      padding: 13px;
-      background: linear-gradient(135deg, var(--cyan) 0%, #2563eb 100%);
-      border: none;
-      border-radius: 10px;
-      font-family: var(--sans);
-      font-size: 14px; font-weight: 600;
-      color: #fff;
-      cursor: pointer;
-      margin-top: 6px;
-      transition: opacity 0.18s, transform 0.18s;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-    }
-    .btn-submit:hover { opacity: 0.9; transform: translateY(-1px); }
-    .btn-submit:active { transform: translateY(0); }
-    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-    /* spinner */
-    .spinner {
-      width: 16px; height: 16px;
-      border: 2px solid rgba(255,255,255,0.3);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* footer */
-    .form-footer {
-      text-align: center;
-      margin-top: 22px;
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-    .form-footer a {
-      color: var(--cyan);
-      text-decoration: none;
-      font-weight: 500;
-      cursor: pointer;
-    }
-    .form-footer a:hover { text-decoration: underline; }
-
-    /* demo credentials card */
-    .demo-card {
-      margin-top: 22px;
-      background: rgba(255,255,255,0.025);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 14px 16px;
-    }
-    .demo-label {
-      font-family: var(--mono);
-      font-size: 9px; font-weight: 700;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-      margin-bottom: 7px;
-    }
-    .demo-creds {
-      font-family: var(--mono);
-      font-size: 12px;
-      color: var(--text-sec);
-      line-height: 1.7;
-    }
-    .demo-creds span { color: var(--text-muted); }
-    .demo-fill {
-      display: inline-block;
-      margin-top: 8px;
-      font-size: 11px; font-weight: 600;
-      color: var(--cyan);
-      cursor: pointer;
-      border: none; background: none;
-      padding: 0; font-family: var(--mono);
-    }
-    .demo-fill:hover { text-decoration: underline; }
+    /* terminal widget */
+    .lp-bot{}
+    .term-box{border:1px solid rgba(213,224,255,.09);border-radius:2px;overflow:hidden;background:rgba(213,224,255,.018);}
+    .term-top{display:flex;align-items:center;gap:6px;padding:9px 13px;border-bottom:1px solid rgba(213,224,255,.07);background:rgba(213,224,255,.02);}
+    .td{width:7px;height:7px;border-radius:50%;background:rgba(213,224,255,.12);}
+    .term-ttl{font-size:8px;letter-spacing:.2em;color:rgba(213,224,255,.24);margin-left:5px;}
+    .term-body{padding:13px 14px;font-size:10px;letter-spacing:.03em;line-height:1.95;color:rgba(213,224,255,.5);min-height:132px;}
+    .t-cm{color:var(--acc);}
+    .t-ok{color:#4ade80;}
+    .t-er{color:#fca5a5;}
+    .t-warn{color:#fbbf24;}
+    .t-dim{color:rgba(213,224,255,.28);}
+    .t-cur{display:inline-block;width:7px;height:12px;background:var(--acc);animation:tblink .9s step-end infinite;vertical-align:text-bottom;margin-left:1px;}
+    @keyframes tblink{0%,100%{opacity:1}50%{opacity:0}}
+    .lp-copy{margin-top:16px;font-size:8px;letter-spacing:.18em;color:rgba(213,224,255,.12);}
 
     /* divider */
-    .divider {
-      display: flex; align-items: center; gap: 12px;
-      margin: 22px 0;
-    }
-    .divider-line { flex: 1; height: 1px; background: var(--border); }
-    .divider-text { font-size: 11px; color: var(--text-muted); }
+    .div{position:fixed;left:55%;top:6%;bottom:6%;width:1px;background:linear-gradient(to bottom,transparent,rgba(213,224,255,.1) 22%,rgba(213,224,255,.1) 78%,transparent);z-index:10;pointer-events:none;}
 
-    /* success message */
-    .success-msg {
-      display: none;
-      background: rgba(34,197,94,0.13);
-      border: 1px solid rgba(34,197,94,0.3);
-      border-radius: 8px;
-      padding: 10px 13px;
-      font-size: 13px;
-      color: var(--green);
-      margin-bottom: 18px;
-    }
-    .success-msg.show { display: block; }
+    /* ── RIGHT PANEL ── */
+    .rp{position:fixed;right:0;top:0;width:45%;height:100%;display:flex;align-items:center;justify-content:center;padding:32px 48px;z-index:20;background:linear-gradient(to right,rgba(5,5,9,0) 0%,rgba(5,5,9,.88) 16%,rgba(5,5,9,.95) 100%);}
 
-    /* forgot password panel */
-    .forgot-panel { display: none; }
-    .forgot-panel.show { display: block; }
-    .login-panel { display: block; }
-    .login-panel.hide { display: none; }
-
-    .back-link {
-      background: none;
-      border: none;
-      color: var(--cyan);
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      padding: 0;
-      margin-bottom: 20px;
-      font-family: var(--sans);
-    }
-    .back-link:hover { text-decoration: underline; }
-
-    /* responsive */
-    @media (max-width: 768px) {
-      .brand-panel { display: none; }
-      .form-panel { padding: 24px 16px; }
-      .form-card { padding: 32px 24px 28px; }
-    }
+    /* card */
+    .card{position:relative;width:100%;max-width:360px;background:rgba(5,5,9,.8);border:1px solid rgba(213,224,255,.13);border-radius:2px;padding:34px 30px 28px;backdrop-filter:blur(40px);-webkit-backdrop-filter:blur(40px);}
+    .card::before{content:'';position:absolute;top:0;left:22px;right:22px;height:1px;background:linear-gradient(to right,transparent,rgba(213,224,255,.42),transparent);}
+    .c-tl{position:absolute;top:-1px;left:-1px;width:12px;height:12px;border-top:1px solid rgba(213,224,255,.5);border-left:1px solid rgba(213,224,255,.5);}
+    .c-br{position:absolute;bottom:-1px;right:-1px;width:12px;height:12px;border-bottom:1px solid rgba(213,224,255,.5);border-right:1px solid rgba(213,224,255,.5);}
+    .cst{display:flex;align-items:center;gap:7px;margin-bottom:22px;}
+    .csd{width:5px;height:5px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px #4ade80;animation:gp 2.4s ease-in-out infinite;}
+    @keyframes gp{0%,100%{opacity:1}50%{opacity:.35}}
+    .cst-t{font-size:8px;letter-spacing:.25em;color:rgba(213,224,255,.28);}
+    .ct{font-size:20px;font-weight:700;letter-spacing:-.02em;margin-bottom:3px;}
+    .cs{font-size:9px;letter-spacing:.13em;color:var(--mut);margin-bottom:26px;}
+    .fg{margin-bottom:14px;}
+    label{display:block;font-size:8px;letter-spacing:.26em;color:var(--mut);margin-bottom:6px;text-transform:uppercase;}
+    input{width:100%;background:var(--fnt);border:1px solid var(--bdr);border-radius:2px;padding:11px 13px;color:var(--acc);font-family:var(--mono);font-size:13px;outline:none;transition:border-color .18s,background .18s;}
+    input::placeholder{color:rgba(213,224,255,.13);}
+    input:focus{border-color:var(--fcs);background:rgba(213,224,255,.07);}
+    .err{font-size:9.5px;padding:9px 12px;border-radius:2px;margin-bottom:12px;display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#fca5a5;letter-spacing:.04em;}
+    .err.show{display:block;}
+    .ok{font-size:9.5px;padding:9px 12px;border-radius:2px;margin-bottom:12px;display:none;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);color:#86efac;letter-spacing:.04em;}
+    .ok.show{display:block;}
+    .btn{width:100%;background:var(--acc);color:var(--bg);border:none;border-radius:2px;padding:13px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.22em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px;transition:opacity .18s,transform .14s;}
+    .btn:hover:not(:disabled){opacity:.84;transform:translateY(-1px);}
+    .btn:disabled{opacity:.34;cursor:not-allowed;}
+    .spin{width:11px;height:11px;border:2px solid rgba(5,5,9,.22);border-top-color:var(--bg);border-radius:50%;animation:sp .6s linear infinite;}
+    @keyframes sp{to{transform:rotate(360deg)}}
+    .foot{display:flex;justify-content:center;gap:16px;margin-top:18px;font-size:9.5px;color:var(--mut);}
+    .foot a{color:var(--dim);text-decoration:none;cursor:pointer;transition:color .15s;}
+    .foot a:hover{color:var(--acc);}
+    .panel.hide{display:none;}
+    .card{animation:ci .65s cubic-bezier(.22,1,.36,1) both;}
+    @keyframes ci{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+    .lc{position:fixed;bottom:24px;left:27%;font-size:8px;letter-spacing:.22em;color:rgba(213,224,255,.14);z-index:30;pointer-events:none;transform:translateX(-50%);}
   </style>
 </head>
 <body>
-<div class="auth-shell">
+<canvas id="c"></canvas>
+<div id="sc"></div><div id="vg"></div>
 
-  <!-- ── Left brand panel ── -->
-  <div class="brand-panel">
-    <div class="brand-logo">
-      <div class="brand-icon">
-        <svg viewBox="0 0 24 24" fill="none">
-          <path d="M12 2L22 7.5V16.5L12 22L2 16.5V7.5L12 2Z" stroke="#38bdf8" stroke-width="1.6" fill="rgba(56,189,248,0.08)"/>
-          <path d="M12 7L17 9.8v5.4L12 18l-5-2.8V9.8L12 7z" fill="rgba(56,189,248,0.15)" stroke="rgba(56,189,248,0.5)" stroke-width="1"/>
-        </svg>
-      </div>
-      <div class="brand-wordmark">System<span>Flow</span></div>
-    </div>
+<a class="logo" href="/landing.html"><div class="lm">FL</div><span class="lt">FLOWRA</span></a>
 
-    <h1 class="brand-headline">Design systems<br><em>that don't break.</em></h1>
-    <p class="brand-sub">Simulate millions of requests per second, catch bottlenecks before production does.</p>
-
-    <div class="diagram-wrap">
-      <svg viewBox="0 0 380 260" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <filter id="glow-c"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-          <filter id="glow-i"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-          <filter id="glow-g"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-          <marker id="arr-c" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
-            <path d="M0,0 L8,4 L0,8 Z" fill="rgba(56,189,248,0.7)"/>
-          </marker>
-          <marker id="arr-i" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
-            <path d="M0,0 L8,4 L0,8 Z" fill="rgba(129,140,248,0.7)"/>
-          </marker>
-          <marker id="arr-g" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="5" markerHeight="5" orient="auto">
-            <path d="M0,0 L8,4 L0,8 Z" fill="rgba(34,197,94,0.7)"/>
-          </marker>
-        </defs>
-
-        <!-- Edges -->
-        <path d="M94,90 C130,90 136,130 156,130" stroke="rgba(56,189,248,0.5)" stroke-width="1.4" fill="none" marker-end="url(#arr-c)"/>
-        <path d="M94,170 C130,170 136,130 156,130" stroke="rgba(56,189,248,0.4)" stroke-width="1.4" fill="none" marker-end="url(#arr-c)"/>
-        <path d="M228,130 C248,130 254,80 274,80" stroke="rgba(129,140,248,0.5)" stroke-width="1.4" fill="none" marker-end="url(#arr-i)"/>
-        <path d="M228,130 C248,130 254,130 274,130" stroke="rgba(129,140,248,0.4)" stroke-width="1.4" fill="none" marker-end="url(#arr-i)"/>
-        <path d="M228,130 C248,130 254,180 274,180" stroke="rgba(34,197,94,0.5)" stroke-width="1.4" fill="none" marker-end="url(#arr-g)"/>
-
-        <!-- Animated traffic on edges -->
-        <circle r="3" fill="#38bdf8" opacity="0.9" filter="url(#glow-c)">
-          <animateMotion dur="2.2s" repeatCount="indefinite">
-            <mpath href="#path1"/>
-          </animateMotion>
-        </circle>
-        <circle r="3" fill="#38bdf8" opacity="0.7" filter="url(#glow-c)">
-          <animateMotion dur="2.2s" repeatCount="indefinite" begin="1.1s">
-            <mpath href="#path2"/>
-          </animateMotion>
-        </circle>
-        <circle r="2.5" fill="#818cf8" opacity="0.9" filter="url(#glow-i)">
-          <animateMotion dur="1.9s" repeatCount="indefinite" begin="0.4s">
-            <mpath href="#path3"/>
-          </animateMotion>
-        </circle>
-        <circle r="2.5" fill="#818cf8" opacity="0.7" filter="url(#glow-i)">
-          <animateMotion dur="2.4s" repeatCount="indefinite" begin="1.2s">
-            <mpath href="#path4"/>
-          </animateMotion>
-        </circle>
-        <circle r="2.5" fill="#22c55e" opacity="0.9" filter="url(#glow-g)">
-          <animateMotion dur="2s" repeatCount="indefinite" begin="0.8s">
-            <mpath href="#path5"/>
-          </animateMotion>
-        </circle>
-
-        <path id="path1" d="M94,90 C130,90 136,130 156,130" style="visibility:hidden"/>
-        <path id="path2" d="M94,170 C130,170 136,130 156,130" style="visibility:hidden"/>
-        <path id="path3" d="M228,130 C248,130 254,80 274,80" style="visibility:hidden"/>
-        <path id="path4" d="M228,130 C248,130 254,130 274,130" style="visibility:hidden"/>
-        <path id="path5" d="M228,130 C248,130 254,180 274,180" style="visibility:hidden"/>
-
-        <!-- Client nodes (left) -->
-        <g class="n-pulse" filter="url(#glow-c)">
-          <rect x="20" y="65" width="74" height="50" rx="10" fill="#0d0f1a" stroke="#38bdf8" stroke-width="1.2"/>
-          <text x="57" y="85" text-anchor="middle" fill="#38bdf8" font-size="8.5" font-family="JetBrains Mono, monospace" font-weight="600">CLIENT</text>
-          <text x="57" y="99" text-anchor="middle" fill="#6e7388" font-size="7" font-family="JetBrains Mono, monospace">web browser</text>
-          <circle cx="57" cy="109" r="2.5" fill="#22c55e" opacity="0.8"/>
-        </g>
-        <g class="n-pulse-2" filter="url(#glow-c)">
-          <rect x="20" y="145" width="74" height="50" rx="10" fill="#0d0f1a" stroke="#38bdf8" stroke-width="1.2"/>
-          <text x="57" y="165" text-anchor="middle" fill="#38bdf8" font-size="8.5" font-family="JetBrains Mono, monospace" font-weight="600">MOBILE</text>
-          <text x="57" y="179" text-anchor="middle" fill="#6e7388" font-size="7" font-family="JetBrains Mono, monospace">iOS / Android</text>
-          <circle cx="57" cy="189" r="2.5" fill="#22c55e" opacity="0.8"/>
-        </g>
-
-        <!-- Gateway (center-left) -->
-        <g class="n-pulse" filter="url(#glow-i)">
-          <rect x="156" y="105" width="72" height="50" rx="10" fill="#0d0f1a" stroke="#818cf8" stroke-width="1.5"/>
-          <text x="192" y="125" text-anchor="middle" fill="#818cf8" font-size="8.5" font-family="JetBrains Mono, monospace" font-weight="600">GATEWAY</text>
-          <text x="192" y="139" text-anchor="middle" fill="#6e7388" font-size="7" font-family="JetBrains Mono, monospace">API + routing</text>
-          <circle cx="192" cy="149" r="2.5" fill="#22c55e" opacity="0.8"/>
-        </g>
-
-        <!-- Services (right) -->
-        <g class="n-pulse-3" filter="url(#glow-i)">
-          <rect x="274" y="55" width="80" height="50" rx="10" fill="#0d0f1a" stroke="#818cf8" stroke-width="1.2"/>
-          <text x="314" y="75" text-anchor="middle" fill="#818cf8" font-size="8.5" font-family="JetBrains Mono, monospace" font-weight="600">SERVICE A</text>
-          <text x="314" y="89" text-anchor="middle" fill="#6e7388" font-size="7" font-family="JetBrains Mono, monospace">app server</text>
-          <circle cx="314" cy="99" r="2.5" fill="#22c55e" opacity="0.8"/>
-        </g>
-        <g class="n-pulse" filter="url(#glow-i)">
-          <rect x="274" y="105" width="80" height="50" rx="10" fill="#0d0f1a" stroke="#818cf8" stroke-width="1.2"/>
-          <text x="314" y="125" text-anchor="middle" fill="#818cf8" font-size="8.5" font-family="JetBrains Mono, monospace" font-weight="600">SERVICE B</text>
-          <text x="314" y="139" text-anchor="middle" fill="#6e7388" font-size="7" font-family="JetBrains Mono, monospace">app server</text>
-          <circle cx="314" cy="149" r="2.5" fill="#22c55e" opacity="0.8"/>
-        </g>
-        <g class="n-pulse-2" filter="url(#glow-g)">
-          <rect x="274" y="155" width="80" height="50" rx="10" fill="#0d0f1a" stroke="#22c55e" stroke-width="1.2"/>
-          <text x="314" y="175" text-anchor="middle" fill="#22c55e" font-size="8.5" font-family="JetBrains Mono, monospace" font-weight="600">POSTGRES</text>
-          <text x="314" y="189" text-anchor="middle" fill="#6e7388" font-size="7" font-family="JetBrains Mono, monospace">primary db</text>
-          <circle cx="314" cy="199" r="2.5" fill="#22c55e" opacity="0.8"/>
-        </g>
-      </svg>
-    </div>
-
-    <div class="stats-row">
-      <div class="stat-item">
-        <div class="stat-val">108</div>
-        <div class="stat-label">Node types</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-val">1M+</div>
-        <div class="stat-label">req/s max</div>
-      </div>
-      <div class="stat-item">
-        <div class="stat-val">12</div>
-        <div class="stat-label">Test scenarios</div>
-      </div>
-    </div>
-
-    <div class="version-tag">v2.0 — Distributed Systems Simulator</div>
+<!-- left info panel -->
+<div class="lp">
+  <div class="lp-top">
+    <div class="lp-ey">DISTRIBUTED SYSTEMS PLATFORM</div>
+    <h1 class="lp-h1">Design.<br>Simulate.<br>Ship.</h1>
+    <p class="lp-sub">Architect distributed systems visually. Run chaos scenarios at scale. Validate resilience before production finds out first.</p>
+    <ul class="lp-feats">
+      <li><span>⬡</span>108 node types across 19 categories</li>
+      <li><span>◈</span>12 chaos testing scenarios</li>
+      <li><span>✦</span>AI topology advisor — live analysis</li>
+      <li><span>⚡</span>Up to 1M req/sec simulation</li>
+    </ul>
   </div>
-
-  <!-- ── Right form panel ── -->
-  <div class="form-panel">
-    <div class="form-card">
-
-      <!-- ── Login panel ── -->
-      <div class="login-panel" id="login-panel">
-        <div class="form-title">Welcome back</div>
-        <div class="form-sub">Sign in to your workspace</div>
-
-        <div id="error" class="error-msg"></div>
-
-        <div class="field">
-          <label for="email">Email address</label>
-          <input type="email" id="email" placeholder="you@example.com" autocomplete="email"/>
-        </div>
-        <div class="field">
-          <label for="password">Password</label>
-          <input type="password" id="password" placeholder="••••••••" autocomplete="current-password"/>
-        </div>
-
-        <button class="btn-submit" id="submit-btn" onclick="handleLogin()">
-          Sign in
-        </button>
-
-        <div style="text-align:center; margin-top:12px;">
-          <a href="#" onclick="showForgot(); return false;" style="font-size:12px; color:var(--text-muted); text-decoration:none;">
-            Forgot password?
-          </a>
-        </div>
-
-        <div class="divider">
-          <div class="divider-line"></div>
-          <span class="divider-text">or</span>
-          <div class="divider-line"></div>
-        </div>
-
-        <div class="form-footer">
-          No account? <a href="/register.html">Create one free</a>
-        </div>
-
-        <div class="demo-card">
-          <div class="demo-label">Demo credentials</div>
-          <div class="demo-creds">
-            demo@systemflow.dev<br>
-            <span>password: demo123</span>
-          </div>
-          <button class="demo-fill" onclick="fillDemo()">↗ Fill demo credentials</button>
-        </div>
+  <div class="lp-bot">
+    <div class="term-box">
+      <div class="term-top">
+        <span class="td"></span><span class="td"></span><span class="td"></span>
+        <span class="term-ttl">FLOWRA SIMULATION ENGINE</span>
       </div>
-
-      <!-- ── Forgot password panel ── -->
-      <div class="forgot-panel" id="forgot-panel">
-        <button class="back-link" onclick="showLogin()">← Back to sign in</button>
-        <div class="form-title">Reset password</div>
-        <div class="form-sub">Enter your email and we'll send reset instructions.</div>
-
-        <div id="forgot-error" class="error-msg"></div>
-        <div id="forgot-success" class="success-msg"></div>
-
-        <div class="field">
-          <label for="forgot-email">Email address</label>
-          <input type="email" id="forgot-email" placeholder="you@example.com" autocomplete="email"/>
-        </div>
-
-        <button class="btn-submit" id="forgot-btn" onclick="handleForgotPassword()">
-          Send reset link
-        </button>
-
-        <div style="text-align:center; margin-top:16px;">
-          <a href="#" onclick="showLogin(); return false;" style="font-size:12px; color:var(--text-muted); text-decoration:none;">
-            Back to sign in
-          </a>
-        </div>
-      </div>
-
+      <div class="term-body" id="term-out"><span class="t-cur"></span></div>
     </div>
+    <div class="lp-copy">© FLOWRA, INC. 2025</div>
   </div>
-
 </div>
 
+<div class="div"></div>
+<div class="lc" id="lc"></div>
+
+<!-- right panel: form -->
+<div class="rp">
+  <div class="card panel" id="lp2">
+    <div class="c-tl"></div><div class="c-br"></div>
+    <div class="cst"><div class="csd"></div><span class="cst-t">SYSTEM ONLINE</span></div>
+    <div class="ct">Welcome back</div>
+    <div class="cs">SIGN IN TO FLOWRA</div>
+    <div class="fg"><label>Email</label><input type="email" id="em" placeholder="you@example.com" autocomplete="email"/></div>
+    <div class="fg"><label>Password</label><input type="password" id="pw" placeholder="••••••••" autocomplete="current-password"/></div>
+    <div class="err" id="er"></div>
+    <button class="btn" id="sb" onclick="doLogin()">SIGN IN</button>
+    <div class="foot">
+      <a onclick="showF()">Forgot password?</a>
+      <span style="opacity:.25">·</span>
+      <a href="/register.html">Create account →</a>
+    </div>
+  </div>
+  <div class="card panel hide" id="fp">
+    <div class="c-tl"></div><div class="c-br"></div>
+    <div class="cst"><div class="csd"></div><span class="cst-t">SYSTEM ONLINE</span></div>
+    <div class="ct">Reset password</div>
+    <div class="cs">SEND RESET INSTRUCTIONS</div>
+    <div class="fg"><label>Email</label><input type="email" id="fe" placeholder="you@example.com"/></div>
+    <div class="err" id="fe2"></div>
+    <div class="ok" id="fo"></div>
+    <button class="btn" id="fb" onclick="doForgot()">SEND RESET LINK</button>
+    <div class="foot"><a onclick="showL()">← Back to sign in</a></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script>
-  // Seed demo user if not exists
-  function seedDemo() {
-    const users = JSON.parse(localStorage.getItem('sf_users') || '[]');
-    if (!users.find(u => u.email === 'demo@systemflow.dev')) {
-      users.push({
-        email: 'demo@systemflow.dev',
-        name: 'Demo User',
-        password: 'demo123',
-        initials: 'DU',
-        avatar: null,
-        createdAt: Date.now(),
-      });
-      localStorage.setItem('sf_users', JSON.stringify(users));
+(function(){
+  var canvas=document.getElementById('c');
+  var W=function(){return window.innerWidth;},H=function(){return window.innerHeight;};
+  var lcEl=document.getElementById('lc');
+
+  var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true});
+  renderer.setSize(W(),H());renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0x050509,1);
+  if(THREE.SRGBColorSpace)renderer.outputColorSpace=THREE.SRGBColorSpace;
+
+  var scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(55,W()/H(),0.1,300);
+  camera.position.set(0,0,16);
+
+  scene.add(new THREE.AmbientLight(0x060614,1));
+  var pl=new THREE.PointLight(0x8899ff,8,70);pl.position.set(-4,2,12);scene.add(pl);
+  var pl2=new THREE.PointLight(0xD5E0FF,3,50);pl2.position.set(6,-3,8);scene.add(pl2);
+
+  function gT(sz){
+    var cv=document.createElement('canvas');cv.width=cv.height=sz;
+    var ctx=cv.getContext('2d'),c=sz/2;
+    var g=ctx.createRadialGradient(c,c,0,c,c,c);
+    g.addColorStop(0,'rgba(213,224,255,1)');g.addColorStop(0.18,'rgba(213,224,255,.62)');
+    g.addColorStop(0.55,'rgba(180,200,255,.1)');g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g;ctx.fillRect(0,0,sz,sz);return new THREE.CanvasTexture(cv);
+  }
+  var GT=gT(128);
+
+  /* starfield */
+  (function(){
+    var n=2500,p=new Float32Array(n*3);
+    for(var i=0;i<n;i++){p[i*3]=(Math.random()-.5)*240;p[i*3+1]=(Math.random()-.5)*180;p[i*3+2]=(Math.random()-.5)*130-30;}
+    var g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));
+    scene.add(new THREE.Points(g,new THREE.PointsMaterial({color:0xD5E0FF,size:.05,transparent:true,opacity:.2,sizeAttenuation:true,depthWrite:false})));
+  })();
+
+  /* scene group offset LEFT so animation fills the left panel area */
+  var group=new THREE.Group();
+  group.position.x=-1.5;
+  scene.add(group);
+
+  /* PARTICLES */
+  var N=2500,HERO=80;
+  var pos=new Float32Array(N*3),vel=[];
+  for(var i=0;i<N;i++){
+    var r=(i<HERO)?(1.5+Math.random()*7):(0.5+Math.random()*12);
+    var th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);
+    pos[i*3]=r*Math.sin(ph)*Math.cos(th);
+    pos[i*3+1]=r*Math.sin(ph)*Math.sin(th);
+    pos[i*3+2]=r*Math.cos(ph)*0.38;
+    vel.push({x:(Math.random()-.5)*.009,y:(Math.random()-.5)*.009,z:(Math.random()-.5)*.004});
+  }
+  var pGeo=new THREE.BufferGeometry();pGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+  group.add(new THREE.Points(pGeo,new THREE.PointsMaterial({color:0xD5E0FF,size:.055,transparent:true,opacity:.55,sizeAttenuation:true,depthWrite:false})));
+
+  /* hero glow sprites */
+  var hS=[];
+  for(var hi=0;hi<HERO;hi++){
+    var sm=new THREE.SpriteMaterial({map:GT,color:0xD5E0FF,transparent:true,opacity:.6,blending:THREE.AdditiveBlending,depthWrite:false});
+    var sp=new THREE.Sprite(sm);sp.scale.setScalar(.9);group.add(sp);hS.push({sp:sp,mat:sm});
+  }
+
+  /* connection lines */
+  var MAX_L=180;
+  var lV=new Float32Array(MAX_L*6);
+  var lGeo=new THREE.BufferGeometry();lGeo.setAttribute('position',new THREE.BufferAttribute(lV,3));
+  var lSeg=new THREE.LineSegments(lGeo,new THREE.LineBasicMaterial({color:0xD5E0FF,transparent:true,opacity:.14,depthWrite:false}));
+  group.add(lSeg);
+
+  function flow(x,y,z,t){
+    var a=Math.sin(x*.22+t*.38)*Math.cos(y*.28+t*.27);
+    var b=Math.cos(x*.3-t*.22)*Math.sin(z*.35+t*.31);
+    var c=Math.sin(y*.18+z*.18+t*.25);
+    return{x:Math.cos(a*Math.PI*2+b)*.042,y:Math.sin(a*Math.PI*2+c)*.042+Math.cos(b*2)*.02,z:c*.014};
+  }
+
+  var mou={tx:0,ty:0,x:0,y:0};
+  window.addEventListener('mousemove',function(e){mou.tx=(e.clientX/W()-.5)*5;mou.ty=-(e.clientY/H()-.5)*3.5;});
+
+  var t0=performance.now(),prev=t0,camA=0;
+  function tick(){
+    requestAnimationFrame(tick);
+    var now=performance.now();
+    var t=(now-t0)/1000,dt=Math.min((now-prev)/1000,.05);
+    prev=now;
+    mou.x+=(mou.tx-mou.x)*.032;mou.y+=(mou.ty-mou.y)*.032;
+    camA+=dt*.04;
+    camera.position.x=Math.sin(camA)*1.4+mou.x*.4;
+    camera.position.y=Math.cos(camA*.65)*.9+mou.y*.35;
+    camera.lookAt(group.position);
+
+    var B=12,BZ=5.5;
+    for(var i=0;i<N;i++){
+      var v=vel[i],f=flow(pos[i*3],pos[i*3+1],pos[i*3+2],t);
+      v.x+=f.x;v.y+=f.y;v.z+=f.z;
+      v.x*=.974;v.y*=.974;v.z*=.977;
+      var spd=Math.sqrt(v.x*v.x+v.y*v.y+v.z*v.z);
+      if(spd>.07){var s=.07/spd;v.x*=s;v.y*=s;v.z*=s;}
+      pos[i*3]+=v.x;pos[i*3+1]+=v.y;pos[i*3+2]+=v.z;
+      if(pos[i*3]>B)pos[i*3]=-B;if(pos[i*3]<-B)pos[i*3]=B;
+      if(pos[i*3+1]>B)pos[i*3+1]=-B;if(pos[i*3+1]<-B)pos[i*3+1]=B;
+      if(pos[i*3+2]>BZ)pos[i*3+2]=-BZ;if(pos[i*3+2]<-BZ)pos[i*3+2]=BZ;
     }
-  }
-  seedDemo();
+    pGeo.attributes.position.needsUpdate=true;
 
-  // Redirect if already logged in
-  if (localStorage.getItem('sf_current_user')) {
-    window.location.href = '/SystemFlow.html';
-  }
+    for(var hi=0;hi<HERO;hi++){
+      hS[hi].sp.position.set(pos[hi*3],pos[hi*3+1],pos[hi*3+2]);
+      hS[hi].mat.opacity=.38+Math.sin(t*1.4+hi*.42)*.2;
+    }
 
-  function showError(msg) {
-    const el = document.getElementById('error');
-    el.textContent = msg;
-    el.classList.add('show');
-  }
-  function hideError() {
-    document.getElementById('error').classList.remove('show');
-  }
-  function setLoading(on) {
-    const btn = document.getElementById('submit-btn');
-    btn.disabled = on;
-    btn.innerHTML = on
-      ? '<div class="spinner"></div> Signing in…'
-      : 'Sign in';
-  }
-
-  function fillDemo() {
-    document.getElementById('email').value = 'demo@systemflow.dev';
-    document.getElementById('password').value = 'demo123';
-    hideError();
-  }
-
-  async function handleLogin() {
-    hideError();
-    const email = document.getElementById('email').value.trim().toLowerCase();
-    const password = document.getElementById('password').value;
-    if (!email) { showError('Enter your email address.'); return; }
-    if (!password) { showError('Enter your password.'); return; }
-
-    setLoading(true);
-
-    // Try backend API first
-    try {
-      const resp = await fetch('http://localhost:4000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        const u = data.user;
-        localStorage.setItem('sf_token', data.token);
-        localStorage.setItem('sf_current_user', JSON.stringify({
-          id: u.id, email: u.email, name: u.name,
-          initials: u.name.split(' ').map(s => s[0]).slice(0, 2).join('').toUpperCase(),
-          avatar: null,
-        }));
-        window.location.href = '/SystemFlow.html';
-        return;
+    var li=0,THR=18;
+    for(var a=0;a<HERO&&li<MAX_L;a++){
+      for(var b=a+1;b<HERO&&li<MAX_L;b++){
+        var dx=pos[a*3]-pos[b*3],dy=pos[a*3+1]-pos[b*3+1],dz=pos[a*3+2]-pos[b*3+2];
+        if(dx*dx+dy*dy+dz*dz<THR){
+          lV[li*6]=pos[a*3];lV[li*6+1]=pos[a*3+1];lV[li*6+2]=pos[a*3+2];
+          lV[li*6+3]=pos[b*3];lV[li*6+4]=pos[b*3+1];lV[li*6+5]=pos[b*3+2];li++;
+        }
       }
-      if (resp.status === 401 || resp.status === 400) {
-        const data = await resp.json().catch(() => ({}));
-        setLoading(false);
-        showError(data.error || 'Invalid email or password.');
-        return;
-      }
-    } catch (_) { /* backend unavailable — fall through to localStorage */ }
-
-    // Fallback: localStorage auth (demo mode)
-    const users = JSON.parse(localStorage.getItem('sf_users') || '[]');
-    const user = users.find(u => u.email === email);
-    if (!user) { setLoading(false); showError('No account found. Create one?'); return; }
-    if (user.password !== password) { setLoading(false); showError('Incorrect password. Try again.'); return; }
-    localStorage.setItem('sf_current_user', JSON.stringify({
-      email: user.email, name: user.name, initials: user.initials, avatar: user.avatar || null,
-    }));
-    window.location.href = '/SystemFlow.html';
-  }
-
-  function showForgot() {
-    document.getElementById('login-panel').classList.add('hide');
-    document.getElementById('forgot-panel').classList.add('show');
-    document.getElementById('forgot-error').classList.remove('show');
-    document.getElementById('forgot-success').classList.remove('show');
-    document.getElementById('forgot-email').value = '';
-  }
-
-  function showLogin() {
-    document.getElementById('forgot-panel').classList.remove('show');
-    document.getElementById('login-panel').classList.remove('hide');
-  }
-
-  async function handleForgotPassword() {
-    const errorEl = document.getElementById('forgot-error');
-    const successEl = document.getElementById('forgot-success');
-    errorEl.classList.remove('show');
-    successEl.classList.remove('show');
-
-    const email = document.getElementById('forgot-email').value.trim().toLowerCase();
-    if (!email) {
-      errorEl.textContent = 'Enter your email address.';
-      errorEl.classList.add('show');
-      return;
     }
+    for(var k=li*6;k<MAX_L*6;k++)lV[k]=0;
+    lGeo.attributes.position.needsUpdate=true;lGeo.setDrawRange(0,li*2);
+    lcEl.textContent='FLOW FIELD · '+N+' PARTICLES · '+li+' ACTIVE LINKS';
 
-    const btn = document.getElementById('forgot-btn');
-    btn.disabled = true;
-    btn.innerHTML = '<div class="spinner"></div> Sending…';
-
-    try {
-      const resp = await fetch('http://localhost:4000/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      const data = await resp.json().catch(() => ({}));
-      btn.disabled = false;
-      btn.innerHTML = 'Send reset link';
-      if (resp.ok) {
-        successEl.textContent = data.message || 'If that email exists, a reset link has been sent.';
-        successEl.classList.add('show');
-      } else {
-        errorEl.textContent = data.error || 'Something went wrong. Please try again.';
-        errorEl.classList.add('show');
-      }
-    } catch (_) {
-      btn.disabled = false;
-      btn.innerHTML = 'Send reset link';
-      errorEl.textContent = 'Server unavailable. Please try again later.';
-      errorEl.classList.add('show');
-    }
+    renderer.render(scene,camera);
   }
+  tick();
+  window.addEventListener('resize',function(){camera.aspect=W()/H();camera.updateProjectionMatrix();renderer.setSize(W(),H());});
+})();
 
-  // Enter key submit
-  document.addEventListener('keydown', (e) => {
-    const forgotVisible = document.getElementById('forgot-panel').classList.contains('show');
-    if (e.key === 'Enter') {
-      if (forgotVisible) handleForgotPassword();
-      else handleLogin();
+/* ═══════════════════════════════════════
+   CYCLING TERMINAL SIMULATION WIDGET
+   3 chaos scenarios, typewriter per line,
+   loops forever with 3s pause between runs.
+═══════════════════════════════════════ */
+(function(){
+  var out=document.getElementById('term-out');
+  if(!out)return;
+
+  var S=[
+    {
+      cmd:'flowra simulate --chaos <span class="t-warn">node-failure</span>',
+      rows:[
+        '  <span class="t-dim">⟶ GATEWAY  </span><span class="t-ok">HEALTHY </span>  <span class="t-dim">p99=<span class="t-ok">11ms</span>  rps=2400</span>',
+        '  <span class="t-dim">⟶ API_1    </span><span class="t-ok">HEALTHY </span>  <span class="t-dim">p99=<span class="t-ok">14ms</span>  rps=1200</span>',
+        '  <span class="t-dim">⟶ AUTH     </span><span class="t-ok">HEALTHY </span>  <span class="t-dim">p99=<span class="t-ok">8ms</span>   rps=600</span>',
+        '  <span class="t-dim">⟶ DB       </span><span class="t-er">DEGRADED</span>  <span class="t-dim">p99=<span class="t-er">84ms</span> rps=600 ← bottleneck</span>',
+        '  <span class="t-cm">⚠  AI: DB is a SPOF at this load. Add read replica.</span>',
+      ]
+    },
+    {
+      cmd:'flowra simulate --chaos <span class="t-warn">traffic-spike</span> --rps 8000',
+      rows:[
+        '  <span class="t-dim">⟶ GATEWAY  </span><span class="t-ok">HEALTHY  </span>  <span class="t-dim">p99=<span class="t-ok">18ms</span>  rps=8000</span>',
+        '  <span class="t-dim">⟶ QUEUE    </span><span class="t-er">SATURATED</span>  <span class="t-dim">depth=<span class="t-er">96%</span>  ← backpressure</span>',
+        '  <span class="t-dim">⟶ API_2    </span><span class="t-ok">HEALTHY  </span>  <span class="t-dim">p99=<span class="t-ok">22ms</span>  rps=4000</span>',
+        '  <span class="t-cm">⚠  AI: QUEUE will cascade to API in ~8s. Scale workers.</span>',
+      ]
+    },
+    {
+      cmd:'flowra simulate --chaos <span class="t-warn">partition</span> --node AUTH',
+      rows:[
+        '  <span class="t-dim">⟶ GATEWAY     </span><span class="t-ok">HEALTHY    </span>  <span class="t-dim">p99=<span class="t-ok">12ms</span></span>',
+        '  <span class="t-dim">⟶ AUTH        </span><span class="t-er">UNREACHABLE</span>  <span class="t-dim">100% error</span>',
+        '  <span class="t-dim">⟶ API_1       </span><span class="t-er">DEGRADED   </span>  <span class="t-dim">auth bypass failing</span>',
+        '  <span class="t-cm">⚠  AI: No circuit breaker on AUTH. All writes blocked.</span>',
+      ]
+    },
+  ];
+
+  var idx=0;
+
+  function run(){
+    var sc=S[idx%S.length];idx++;
+    out.innerHTML='';
+    var lines=['<span class="t-dim">$</span> <span class="t-cm">flowra simulate</span> '+sc.cmd].concat(sc.rows).concat(['<span class="t-dim">$</span><span class="t-cur"></span>']);
+    var li=0;
+    function next(){
+      if(li>=lines.length){setTimeout(run,3200);return;}
+      var div=document.createElement('div');div.innerHTML=lines[li++];out.appendChild(div);
+      setTimeout(next,li===1?80:360+Math.random()*160);
     }
-  });
+    next();
+  }
+  setTimeout(run,600);
+})();
+
+function showErr(m){var e=document.getElementById('er');e.textContent=m;e.classList.add('show');}
+function hideErr(){document.getElementById('er').classList.remove('show');}
+function setLoad(on){var b=document.getElementById('sb');b.disabled=on;b.innerHTML=on?'<div class="spin"></div>SIGNING IN':'SIGN IN';}
+async function doLogin(){
+  hideErr();
+  var email=document.getElementById('em').value.trim().toLowerCase();
+  var pass=document.getElementById('pw').value;
+  if(!email){showErr('Enter your email.');return;}
+  if(!pass){showErr('Enter your password.');return;}
+  setLoad(true);
+  try{
+    var r=await fetch('http://localhost:4000/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pass})});
+    if(r.ok){
+      var d=await r.json();
+      localStorage.setItem('sf_token',d.token);
+      localStorage.setItem('sf_current_user',JSON.stringify({id:d.user.id,email:d.user.email,name:d.user.name,initials:d.user.name.split(' ').map(function(s){return s[0];}).slice(0,2).join('').toUpperCase(),avatar:null}));
+      window.location.href='/SystemFlow.html';return;
+    }
+    var d2=await r.json().catch(function(){return{};});setLoad(false);showErr(d2.error||'Invalid email or password.');
+  }catch(_){
+    var users=JSON.parse(localStorage.getItem('sf_users')||'[]');
+    var user=users.find(function(u){return u.email===email;});
+    if(!user){setLoad(false);showErr('No account found.');return;}
+    if(user.password!==pass){setLoad(false);showErr('Incorrect password.');return;}
+    localStorage.setItem('sf_current_user',JSON.stringify({email:user.email,name:user.name,initials:user.initials,avatar:null}));
+    window.location.href='/SystemFlow.html';
+  }
+}
+function showF(){document.getElementById('lp2').classList.add('hide');document.getElementById('fp').classList.remove('hide');document.getElementById('fe').value='';}
+function showL(){document.getElementById('fp').classList.add('hide');document.getElementById('lp2').classList.remove('hide');}
+async function doForgot(){
+  var ee=document.getElementById('fe2'),oe=document.getElementById('fo');
+  ee.classList.remove('show');oe.classList.remove('show');
+  var email=document.getElementById('fe').value.trim().toLowerCase();
+  if(!email){ee.textContent='Enter your email.';ee.classList.add('show');return;}
+  var b=document.getElementById('fb');b.disabled=true;b.innerHTML='<div class="spin"></div>SENDING';
+  try{
+    var r=await fetch('http://localhost:4000/api/auth/forgot-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email})});
+    var d=await r.json().catch(function(){return{};});
+    b.disabled=false;b.innerHTML='SEND RESET LINK';
+    if(r.ok){oe.textContent=d.message||'Reset link sent.';oe.classList.add('show');}
+    else{ee.textContent=d.error||'Something went wrong.';ee.classList.add('show');}
+  }catch(_){b.disabled=false;b.innerHTML='SEND RESET LINK';ee.textContent='Server unavailable.';ee.classList.add('show');}
+}
+document.addEventListener('keydown',function(e){if(e.key!=='Enter')return;document.getElementById('fp').classList.contains('hide')?doLogin():doForgot();});
 </script>
 </body>
 </html>

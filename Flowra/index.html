@@ -288,28 +288,96 @@ function setupBar(){
   }
 }
 
-function patchAuthNav(){
-  var nav=document.querySelector('[aria-label="Main site navigation"]');
-  if(!nav||document.getElementById('fl-auth-nav'))return;
-  var wrap=nav.querySelector('.flex.items-center.justify-between,.flex.items-center');
-  if(!wrap)wrap=nav;
-  var bar=document.createElement('div');
-  bar.id='fl-auth-nav';
-  bar.style.cssText='display:flex;align-items:center;pointer-events:auto;position:relative;z-index:10;';
-  var signA=document.createElement('a');
-  signA.href='/login.html';
-  signA.textContent='GET STARTED';
-  signA.style.cssText='font:700 10px/1 monospace;letter-spacing:0.2em;color:#D5E0FF;text-decoration:none;padding:10px 20px;background:rgba(5,5,9,0.82);border:1px solid rgba(213,224,255,0.2);border-radius:2px;backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);transition:border-color 0.18s,background 0.18s;';
-  signA.addEventListener('mouseover',function(){signA.style.borderColor='rgba(213,224,255,0.45)';signA.style.background='rgba(213,224,255,0.08)';});
-  signA.addEventListener('mouseout',function(){signA.style.borderColor='rgba(213,224,255,0.2)';signA.style.background='rgba(5,5,9,0.82)';});
-  bar.appendChild(signA);
-  wrap.appendChild(bar);
+function patchLoginBtn(){
+  /* Redirect any nav LOGIN link/button to our login page */
+  document.querySelectorAll('a,button').forEach(function(el){
+    if(/^\s*log[\s-]?in\s*$/i.test(el.textContent.trim())){
+      if(el._flLogin)return;el._flLogin=true;
+      el.addEventListener('click',function(e){
+        e.preventDefault();e.stopPropagation();
+        window.location.href='/login.html';
+      },true);
+      if(el.tagName==='A')el.href='/login.html';
+    }
+  });
+  /* Kill any Hubtown login modal that managed to open */
+  document.querySelectorAll('[class*="modal"],[class*="Modal"],[class*="dialog"],[class*="Dialog"],[role="dialog"]').forEach(function(m){
+    if(/login\s*wo|customer|channel.partner|vendor|employee/i.test(m.textContent)){
+      m.style.display='none';
+      m.remove();
+    }
+  });
 }
 
-document.addEventListener('DOMContentLoaded',function(){patchLogo();setupBar();patchAuthNav();});
+/* ── Flowra SaaS menu overlay ── */
+(function(){
+  var ov=document.createElement('div');
+  ov.id='fl-menu-ov';
+  ov.style.cssText='position:fixed;inset:0;z-index:999990;display:none;font-family:monospace;';
+
+  var bd=document.createElement('div');
+  bd.style.cssText='position:absolute;inset:0;background:rgba(5,5,9,.75);backdrop-filter:blur(4px);';
+  bd.addEventListener('click',close);ov.appendChild(bd);
+
+  var dr=document.createElement('div');
+  dr.style.cssText='position:absolute;right:0;top:0;bottom:0;width:360px;background:#08080f;border-left:1px solid rgba(213,224,255,.1);display:flex;flex-direction:column;overflow-y:auto;';
+
+  dr.innerHTML=
+    '<div style="display:flex;justify-content:space-between;align-items:center;padding:28px 28px 24px;border-bottom:1px solid rgba(213,224,255,.07);">'+
+      '<span style="font-size:8px;letter-spacing:.3em;color:rgba(213,224,255,.3);">■ NAVIGATE</span>'+
+      '<button onclick="window.__flMenuClose()" style="background:rgba(213,224,255,.08);border:1px solid rgba(213,224,255,.15);color:#D5E0FF;font-family:monospace;font-size:8px;letter-spacing:.2em;padding:7px 14px;cursor:pointer;border-radius:2px;">✕ CLOSE</button>'+
+    '</div>'+
+    '<nav style="padding:36px 28px 0;flex:1;">'+
+      '<style>#fl-menu-ov nav a{display:block;font-size:clamp(28px,4vw,42px);font-weight:700;letter-spacing:-.02em;color:rgba(213,224,255,.85);text-decoration:none;padding:6px 0;transition:color .15s,padding-left .15s;}#fl-menu-ov nav a:hover{color:#D5E0FF;padding-left:8px;}</style>'+
+      '<a href="/login.html">SIGN IN</a>'+
+      '<a href="/register.html">GET STARTED</a>'+
+      '<a href="#features" onclick="window.__flMenuClose()">FEATURES</a>'+
+      '<a href="#" onclick="window.__flMenuClose()">CHANGELOG</a>'+
+      '<a href="#" onclick="window.__flMenuClose()">DOCS</a>'+
+    '</nav>'+
+    '<div style="padding:28px;border-top:1px solid rgba(213,224,255,.07);margin-top:auto;">'+
+      '<div style="font-size:7.5px;letter-spacing:.3em;color:rgba(213,224,255,.22);margin-bottom:14px;">■ LEGAL &amp; INFO</div>'+
+      '<style>#fl-menu-ov .fl-link{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(213,224,255,.04);text-decoration:none;color:rgba(213,224,255,.4);font-size:9px;letter-spacing:.18em;transition:color .15s;}#fl-menu-ov .fl-link:hover{color:rgba(213,224,255,.8);}#fl-menu-ov .fl-link:last-child{border-bottom:none;}#fl-menu-ov .fl-num{font-size:8px;color:rgba(213,224,255,.2);}</style>'+
+      '<a class="fl-link" href="/privacy.html">PRIVACY POLICY<span class="fl-num">01</span></a>'+
+      '<a class="fl-link" href="/terms.html">TERMS OF SERVICE<span class="fl-num">02</span></a>'+
+      '<a class="fl-link" href="#">SECURITY<span class="fl-num">03</span></a>'+
+      '<a class="fl-link" href="#">STATUS PAGE<span class="fl-num">04</span></a>'+
+      '<a class="fl-link" href="#">CONTACT<span class="fl-num">05</span></a>'+
+      '<div style="margin-top:20px;display:flex;justify-content:space-between;align-items:center;">'+
+        '<span style="font-size:8.5px;letter-spacing:.2em;color:rgba(213,224,255,.2);">FLOWRA.DEV</span>'+
+        '<span style="font-size:8px;letter-spacing:.14em;color:rgba(213,224,255,.15);">v0.1.0-alpha</span>'+
+      '</div>'+
+    '</div>';
+
+  ov.appendChild(dr);document.body.appendChild(ov);
+
+  function open(){ov.style.display='block';document.body.style.overflow='hidden';}
+  function close(){ov.style.display='none';document.body.style.overflow='';}
+  window.__flMenuClose=close;
+
+  function patchMenuBtn(){
+    document.querySelectorAll('button,a').forEach(function(el){
+      if(/^\s*menu\s*$/i.test(el.textContent.trim())&&!el._flMenu){
+        el._flMenu=true;
+        el.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();open();},true);
+      }
+    });
+    /* Kill Hubtown drawer if it opened anyway */
+    document.querySelectorAll('[class*="explore"],[class*="Explore"],[class*="drawer"],[class*="Drawer"]').forEach(function(m){
+      if(/hubtown|real estate|regulation|investor/i.test(m.textContent)){m.style.display='none';}
+    });
+  }
+
+  [300,800,1500,3000].forEach(function(t){setTimeout(patchMenuBtn,t);});
+  new MutationObserver(patchMenuBtn).observe(document.body,{childList:true,subtree:true});
+})();
+
+document.addEventListener('DOMContentLoaded',function(){patchLogo();setupBar();patchLoginBtn();});
 [200,600,1200].forEach(function(t){setTimeout(patchLogo,t);});
 [150,500,1200].forEach(function(t){setTimeout(setupBar,t);});
 [1000,2000,4000].forEach(function(t){setTimeout(removeUI,t);});
-[800,1500,3000].forEach(function(t){setTimeout(patchAuthNav,t);});
+[500,1000,2000,4000].forEach(function(t){setTimeout(patchLoginBtn,t);});
+
+new MutationObserver(function(){patchLoginBtn();}).observe(document.body,{childList:true,subtree:true});
 })();
 </script></body></html>

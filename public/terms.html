@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Terms of Service — Flowra</title>
+  <style>
+    @font-face{font-family:'CM';src:url('/fonts/commit-mono.otf') format('opentype');font-display:swap;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{--bg:#050509;--acc:#D5E0FF;--mut:rgba(213,224,255,.38);--bdr:rgba(213,224,255,.09);--mono:'CM','JetBrains Mono',monospace;}
+    html{scroll-behavior:smooth;}
+    body{background:var(--bg);color:var(--acc);font-family:var(--mono);min-height:100vh;}
+    ::-webkit-scrollbar{width:3px;} ::-webkit-scrollbar-thumb{background:rgba(213,224,255,.12);}
+    nav{position:sticky;top:0;z-index:50;background:rgba(5,5,9,.92);border-bottom:1px solid var(--bdr);padding:0 40px;height:56px;display:flex;align-items:center;justify-content:space-between;backdrop-filter:blur(20px);}
+    .nlogo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+    .nlm{width:24px;height:24px;border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700;}
+    .nlt{font-size:9px;font-weight:700;letter-spacing:.28em;color:rgba(213,224,255,.6);}
+    .nbk{font-size:9px;letter-spacing:.16em;color:var(--mut);text-decoration:none;transition:color .15s;}
+    .nbk:hover{color:var(--acc);}
+    .hero{border-bottom:1px solid var(--bdr);padding:72px 40px 56px;max-width:780px;margin:0 auto;}
+    .hero-label{font-size:8px;letter-spacing:.32em;color:rgba(213,224,255,.26);margin-bottom:16px;}
+    .hero-title{font-size:clamp(28px,4vw,48px);font-weight:700;letter-spacing:-.025em;line-height:1.06;margin-bottom:16px;}
+    .hero-meta{font-size:9.5px;letter-spacing:.1em;color:var(--mut);}
+    .content{max-width:780px;margin:0 auto;padding:56px 40px 100px;}
+    h2{font-size:13px;font-weight:700;letter-spacing:.12em;color:var(--acc);margin:40px 0 14px;padding-top:8px;border-top:1px solid var(--bdr);}
+    h2:first-child{margin-top:0;border-top:none;}
+    p{font-size:12px;letter-spacing:.03em;color:var(--mut);line-height:1.85;margin-bottom:14px;}
+    ul{margin:0 0 14px 0;padding-left:20px;}
+    li{font-size:12px;letter-spacing:.03em;color:var(--mut);line-height:1.85;margin-bottom:6px;}
+    a{color:rgba(213,224,255,.7);text-decoration:none;border-bottom:1px solid rgba(213,224,255,.2);}
+    a:hover{color:var(--acc);}
+    .toc{background:rgba(213,224,255,.02);border:1px solid var(--bdr);border-radius:2px;padding:20px 24px;margin-bottom:40px;}
+    .toc-label{font-size:8px;letter-spacing:.28em;color:rgba(213,224,255,.24);margin-bottom:12px;}
+    .toc ul{padding-left:0;list-style:none;}
+    .toc li{margin-bottom:6px;}
+    .toc a{font-size:10px;letter-spacing:.08em;border-bottom:none;color:rgba(213,224,255,.45);}
+    .toc a:hover{color:var(--acc);}
+    .notice{background:rgba(213,224,255,.025);border:1px solid rgba(213,224,255,.1);border-radius:2px;padding:16px 20px;margin-bottom:32px;font-size:11px;letter-spacing:.04em;color:rgba(213,224,255,.5);line-height:1.7;}
+    footer{border-top:1px solid var(--bdr);padding:28px 40px;display:flex;justify-content:space-between;align-items:center;max-width:780px;margin:0 auto;}
+    .fc{font-size:8.5px;letter-spacing:.14em;color:rgba(213,224,255,.2);}
+  </style>
+</head>
+<body>
+<nav>
+  <a class="nlogo" href="/landing.html">
+    <div class="nlm">FL</div>
+    <span class="nlt">FLOWRA</span>
+  </a>
+  <a class="nbk" href="/landing.html">← Back to home</a>
+</nav>
+
+<div class="hero">
+  <div class="hero-label">LEGAL DOCUMENT</div>
+  <h1 class="hero-title">Terms of Service</h1>
+  <p class="hero-meta">Effective date: May 19, 2025 &nbsp;·&nbsp; Last updated: May 19, 2025</p>
+</div>
+
+<div class="content">
+  <div class="notice">
+    By accessing or using Flowra, you agree to be bound by these Terms of Service. If you do not agree to these terms, do not use the platform.
+  </div>
+
+  <div class="toc">
+    <div class="toc-label">TABLE OF CONTENTS</div>
+    <ul>
+      <li><a href="#s1">1. Acceptance of Terms</a></li>
+      <li><a href="#s2">2. Description of Service</a></li>
+      <li><a href="#s3">3. Account Registration</a></li>
+      <li><a href="#s4">4. Acceptable Use</a></li>
+      <li><a href="#s5">5. Intellectual Property</a></li>
+      <li><a href="#s6">6. Your Content</a></li>
+      <li><a href="#s7">7. Alpha / Beta Service</a></li>
+      <li><a href="#s8">8. Disclaimers</a></li>
+      <li><a href="#s9">9. Limitation of Liability</a></li>
+      <li><a href="#s10">10. Termination</a></li>
+      <li><a href="#s11">11. Governing Law</a></li>
+      <li><a href="#s12">12. Contact</a></li>
+    </ul>
+  </div>
+
+  <h2 id="s1">1. Acceptance of Terms</h2>
+  <p>These Terms of Service ("Terms") govern your access to and use of the Flowra platform, including any associated websites, APIs, applications, and services (collectively, the "Service") provided by Flowra, Inc. ("Flowra", "we", "us", or "our").</p>
+  <p>By creating an account or accessing the Service, you agree to these Terms and our <a href="/privacy.html">Privacy Policy</a>. If you are using the Service on behalf of an organization, you agree to these Terms on behalf of that organization.</p>
+
+  <h2 id="s2">2. Description of Service</h2>
+  <p>Flowra is a distributed systems design and simulation platform that allows users to:</p>
+  <ul>
+    <li>Design distributed system architectures visually using a node-based canvas</li>
+    <li>Simulate synthetic traffic loads and chaos scenarios against designed architectures</li>
+    <li>Receive AI-powered analysis of architecture reliability and bottlenecks</li>
+    <li>Collaborate with team members on system designs</li>
+  </ul>
+  <p>We reserve the right to modify, suspend, or discontinue the Service (or any part) at any time with or without notice during the alpha period.</p>
+
+  <h2 id="s3">3. Account Registration</h2>
+  <p>To use the Service, you must register for an account. You agree to:</p>
+  <ul>
+    <li>Provide accurate, current, and complete information during registration</li>
+    <li>Maintain the security of your password and accept responsibility for all activity under your account</li>
+    <li>Notify us immediately at <a href="mailto:security@flowra.dev">security@flowra.dev</a> if you suspect unauthorized access to your account</li>
+    <li>Not create accounts for the purpose of circumventing restrictions or abuse detection</li>
+  </ul>
+  <p>You must be at least 16 years of age to use the Service.</p>
+
+  <h2 id="s4">4. Acceptable Use</h2>
+  <p>You agree not to use the Service to:</p>
+  <ul>
+    <li>Violate any applicable laws, regulations, or third-party rights</li>
+    <li>Transmit malware, viruses, or any code intended to harm systems</li>
+    <li>Attempt to gain unauthorized access to any part of the Service or its infrastructure</li>
+    <li>Reverse-engineer, decompile, or disassemble any part of the Service</li>
+    <li>Scrape or harvest data from the platform without express written permission</li>
+    <li>Use the Service to build a competing product using our proprietary methods</li>
+    <li>Generate, store, or transmit content that is unlawful, harmful, defamatory, or infringing</li>
+    <li>Circumvent rate limits or abuse the Service in a way that degrades performance for other users</li>
+  </ul>
+
+  <h2 id="s5">5. Intellectual Property</h2>
+  <p>The Service, including its source code, design, algorithms, and documentation, is owned by Flowra, Inc. and protected by intellectual property laws. These Terms grant you a limited, non-exclusive, non-transferable, revocable license to use the Service for its intended purpose.</p>
+  <p>You may not copy, reproduce, distribute, create derivative works of, or publicly display any part of the Service without prior written consent.</p>
+
+  <h2 id="s6">6. Your Content</h2>
+  <p>You retain ownership of architecture designs, simulation configurations, and other content you create within the Service ("Your Content"). By using the Service, you grant Flowra a limited license to store and process Your Content solely to provide the Service to you.</p>
+  <p>We do not use Your Content to train AI models, share it with third parties, or use it for any purpose beyond delivering the Service. You are responsible for ensuring Your Content does not violate any laws or third-party rights.</p>
+
+  <h2 id="s7">7. Alpha / Beta Service</h2>
+  <p>The current version of Flowra is provided as an <strong>alpha release</strong>. This means:</p>
+  <ul>
+    <li>The Service may contain bugs, errors, or incomplete features</li>
+    <li>Uptime and data persistence are not guaranteed</li>
+    <li>Features may change significantly between releases without notice</li>
+    <li>Data may be reset during major version upgrades (we will provide advance notice when possible)</li>
+  </ul>
+  <p>The alpha Service is provided free of charge. When paid plans are introduced, existing users will be notified in advance.</p>
+
+  <h2 id="s8">8. Disclaimers</h2>
+  <p>THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, OR THAT THE SERVICE WILL BE UNINTERRUPTED OR ERROR-FREE.</p>
+  <p>Flowra does not warrant that simulation results accurately represent production system behavior. Simulation outputs are estimates intended to assist engineering decisions, not guarantees of production performance.</p>
+
+  <h2 id="s9">9. Limitation of Liability</h2>
+  <p>TO THE MAXIMUM EXTENT PERMITTED BY LAW, FLOWRA SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, INCLUDING LOSS OF PROFITS, DATA, OR BUSINESS INTERRUPTION, ARISING FROM YOUR USE OF OR INABILITY TO USE THE SERVICE.</p>
+  <p>Flowra's total cumulative liability to you for any claims arising from these Terms or the Service shall not exceed the amount you paid to Flowra in the 12 months preceding the claim (or $0 for free accounts).</p>
+
+  <h2 id="s10">10. Termination</h2>
+  <p>You may terminate your account at any time by contacting <a href="mailto:hello@flowra.dev">hello@flowra.dev</a>. We will delete your data within 30 days.</p>
+  <p>We may suspend or terminate your access immediately, without notice, if you violate these Terms, engage in fraudulent activity, or if required by law. Upon termination, your right to use the Service ceases immediately.</p>
+
+  <h2 id="s11">11. Governing Law</h2>
+  <p>These Terms shall be governed by and construed in accordance with applicable law. Any disputes arising under these Terms shall be resolved through good-faith negotiation first, and if unresolved, through binding arbitration or courts of competent jurisdiction.</p>
+
+  <h2 id="s12">12. Contact</h2>
+  <p>For questions about these Terms, contact us at:</p>
+  <ul>
+    <li>Email: <a href="mailto:legal@flowra.dev">legal@flowra.dev</a></li>
+    <li>General inquiries: <a href="mailto:hello@flowra.dev">hello@flowra.dev</a></li>
+  </ul>
+</div>
+
+<footer>
+  <div class="fc">© FLOWRA, INC. 2025</div>
+  <div class="fc"><a href="/privacy.html" style="color:rgba(213,224,255,.2);border:none;">Privacy Policy</a></div>
+</footer>
+</body>
+</html>

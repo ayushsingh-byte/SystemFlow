@@ -1,521 +1,372 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Create Account — SystemFlow</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Create Account — Flowra</title>
   <style>
-    :root {
-      --bg: #06070d;
-      --bg2: #0a0c14;
-      --surface: rgba(20, 22, 32, 0.85);
-      --surface-solid: #14161f;
-      --surface2: rgba(30, 33, 46, 0.9);
-      --border: #1f2230;
-      --border2: #2a2e3f;
-      --text: #f4f5fa;
-      --text-sec: #b0b5c7;
-      --text-muted: #6e7388;
-      --cyan: #38bdf8;
-      --cyan-dim: rgba(56,189,248,0.13);
-      --cyan-glow: rgba(56,189,248,0.35);
-      --indigo: #818cf8;
-      --indigo-dim: rgba(129,140,248,0.13);
-      --green: #22c55e;
-      --green-dim: rgba(34,197,94,0.13);
-      --red: #ef4444;
-      --red-dim: rgba(239,68,68,0.15);
-      --amber: #fbbf24;
-      --mono: "JetBrains Mono", ui-monospace, monospace;
-      --sans: "Inter", -apple-system, sans-serif;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body {
-      height: 100%; width: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: var(--sans);
-      font-size: 14px;
-      overflow: hidden;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    .auth-shell { display: flex; height: 100vh; width: 100vw; }
-
-    /* ── Left brand panel ── */
-    .brand-panel {
-      width: 420px;
-      flex-shrink: 0;
-      background: linear-gradient(135deg, #06070d 0%, #0d0f1c 50%, #06080f 100%);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      padding: 48px 44px;
-      position: relative;
-      overflow: hidden;
-    }
-    .brand-panel::before {
-      content: "";
-      position: absolute;
-      top: -100px; right: -60px;
-      width: 360px; height: 360px;
-      background: radial-gradient(circle, rgba(129,140,248,0.08) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .brand-panel::after {
-      content: "";
-      position: absolute;
-      bottom: -80px; left: -40px;
-      width: 280px; height: 280px;
-      background: radial-gradient(circle, rgba(34,197,94,0.06) 0%, transparent 70%);
-      pointer-events: none;
-    }
-
-    .brand-logo {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 48px;
-      position: relative; z-index: 1;
-    }
-    .brand-icon {
-      width: 38px; height: 38px;
-      background: rgba(56,189,248,0.1);
-      border: 1px solid rgba(56,189,248,0.3);
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .brand-icon svg { width: 20px; height: 20px; }
-    .brand-wordmark { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; color: var(--text); }
-    .brand-wordmark span { color: var(--cyan); }
-
-    .brand-headline {
-      font-size: 30px; font-weight: 800;
-      line-height: 1.18; letter-spacing: -0.03em;
-      color: var(--text);
-      margin-bottom: 14px;
-      position: relative; z-index: 1;
-    }
-    .brand-headline em {
-      font-style: normal;
-      background: linear-gradient(135deg, var(--indigo) 0%, var(--cyan) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .brand-sub {
-      font-size: 13.5px; line-height: 1.65;
-      color: var(--text-muted);
-      margin-bottom: 44px;
-      position: relative; z-index: 1;
-    }
-
-    /* Steps */
-    .steps {
-      display: flex;
-      flex-direction: column;
-      gap: 22px;
-      flex: 1;
-      position: relative; z-index: 1;
-    }
-    .step {
-      display: flex;
-      gap: 16px;
-      align-items: flex-start;
-    }
-    .step-num {
-      font-family: var(--mono);
-      font-size: 10px; font-weight: 700;
-      color: var(--cyan);
-      opacity: 0.6;
-      padding-top: 3px;
-      flex-shrink: 0;
-      letter-spacing: 0.04em;
-      min-width: 24px;
-    }
-    .step-body {}
-    .step-title {
-      font-size: 13.5px; font-weight: 600;
-      color: var(--text-sec);
-      margin-bottom: 2px;
-    }
-    .step-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
-
-    /* Feature chips */
-    .feature-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 36px;
-      position: relative; z-index: 1;
-    }
-    .chip {
-      padding: 5px 10px;
-      border-radius: 20px;
-      font-size: 10.5px; font-weight: 600;
-      font-family: var(--mono);
-      border: 1px solid;
-    }
-    .chip-cyan { color: var(--cyan); border-color: rgba(56,189,248,0.25); background: var(--cyan-dim); }
-    .chip-indigo { color: var(--indigo); border-color: rgba(129,140,248,0.25); background: var(--indigo-dim); }
-    .chip-green { color: var(--green); border-color: rgba(34,197,94,0.25); background: var(--green-dim); }
-
-    .version-tag {
-      position: absolute;
-      bottom: 28px; left: 44px;
-      font-family: var(--mono);
-      font-size: 10px;
-      color: var(--border2);
-      letter-spacing: 0.04em;
-    }
-
-    /* ── Right form panel ── */
-    .form-panel {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--bg);
-      padding: 24px;
-      overflow-y: auto;
-    }
-    .form-card {
-      width: 100%;
-      max-width: 440px;
-      background: var(--surface);
-      border: 1px solid var(--border2);
-      border-radius: 20px;
-      padding: 40px 40px 36px;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      box-shadow: 0 4px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03);
-    }
-    .form-title { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; color: var(--text); margin-bottom: 4px; }
-    .form-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; }
-
-    .field { margin-bottom: 16px; }
-    .field label {
-      display: block;
-      font-size: 12px; font-weight: 600;
-      color: var(--text-sec);
-      margin-bottom: 7px;
-      letter-spacing: 0.01em;
-    }
-    .field input {
-      width: 100%;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid var(--border2);
-      border-radius: 10px;
-      padding: 11px 14px;
-      font-family: var(--sans);
-      font-size: 14px;
-      color: var(--text);
-      outline: none;
-      transition: border-color 0.18s, box-shadow 0.18s;
-    }
-    .field input::placeholder { color: var(--text-muted); }
-    .field input:focus { border-color: var(--cyan); box-shadow: 0 0 0 3px var(--cyan-dim); }
-    .field input:disabled { opacity: 0.5; cursor: not-allowed; }
-    .field input.invalid { border-color: var(--red); box-shadow: 0 0 0 3px var(--red-dim); }
-
-    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-
-    /* Password strength */
-    .pw-strength {
-      margin-top: 6px;
-      display: flex;
-      gap: 4px;
-      align-items: center;
-    }
-    .pw-bar {
-      flex: 1; height: 3px; border-radius: 2px;
-      background: var(--border2);
-      transition: background 0.2s;
-    }
-    .pw-label { font-size: 10px; color: var(--text-muted); min-width: 36px; text-align: right; }
-
-    .error-msg {
-      display: none;
-      background: var(--red-dim);
-      border: 1px solid rgba(239,68,68,0.3);
-      border-radius: 8px;
-      padding: 10px 13px;
-      font-size: 13px;
-      color: var(--red);
-      margin-bottom: 16px;
-    }
-    .error-msg.show { display: block; }
-
-    .btn-submit {
-      width: 100%;
-      padding: 13px;
-      background: linear-gradient(135deg, var(--indigo) 0%, var(--cyan) 100%);
-      border: none;
-      border-radius: 10px;
-      font-family: var(--sans);
-      font-size: 14px; font-weight: 600;
-      color: #fff;
-      cursor: pointer;
-      margin-top: 6px;
-      transition: opacity 0.18s, transform 0.18s;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
-    }
-    .btn-submit:hover { opacity: 0.9; transform: translateY(-1px); }
-    .btn-submit:active { transform: translateY(0); }
-    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-
-    .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .terms {
-      font-size: 11px; color: var(--text-muted);
-      text-align: center;
-      margin-top: 14px;
-      line-height: 1.6;
-    }
-    .terms a { color: var(--cyan); text-decoration: none; }
-
-    .form-footer {
-      text-align: center;
-      margin-top: 20px;
-      font-size: 13px;
-      color: var(--text-muted);
-    }
-    .form-footer a { color: var(--cyan); text-decoration: none; font-weight: 500; cursor: pointer; }
-    .form-footer a:hover { text-decoration: underline; }
-
-    @media (max-width: 768px) {
-      .brand-panel { display: none; }
-      .form-panel { padding: 16px; }
-      .form-card { padding: 28px 20px; }
-      .field-row { grid-template-columns: 1fr; }
-    }
+    @font-face{font-family:'CM';src:url('/fonts/commit-mono.otf') format('opentype');font-display:swap;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    :root{--bg:#050509;--acc:#D5E0FF;--dim:rgba(213,224,255,.6);--mut:rgba(213,224,255,.35);--fnt:rgba(213,224,255,.055);--bdr:rgba(213,224,255,.1);--fcs:rgba(213,224,255,.38);--mono:'CM','JetBrains Mono',monospace;}
+    html,body{height:100%;overflow:hidden;background:var(--bg);font-family:var(--mono);color:var(--acc);}
+    #c{position:fixed;inset:0;width:100%;height:100%;z-index:0;}
+    #sc{position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.05) 2px,rgba(0,0,0,.05) 4px);pointer-events:none;z-index:1;}
+    #vg{position:fixed;inset:0;background:radial-gradient(ellipse 90% 100% at 28% 50%,transparent 18%,rgba(5,5,9,.55) 100%);pointer-events:none;z-index:2;}
+    #phase-label{font-size:9.5px;letter-spacing:.08em;color:rgba(213,224,255,.5);}
+    /* left info panel */
+    .lp{position:fixed;left:0;top:0;width:56%;height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:28px 52px 36px;z-index:10;pointer-events:none;}
+    .lp-top{margin-top:88px;}
+    .lp-ey{font-size:8px;letter-spacing:.34em;color:rgba(213,224,255,.26);margin-bottom:20px;display:flex;align-items:center;gap:12px;}
+    .lp-ey::after{content:'';flex:0 0 26px;height:1px;background:rgba(213,224,255,.16);}
+    .lp-h1{font-size:clamp(30px,3.8vw,52px);font-weight:700;letter-spacing:-.028em;line-height:1.06;color:var(--acc);margin-bottom:18px;}
+    .lp-sub{font-size:11px;letter-spacing:.04em;color:rgba(213,224,255,.36);line-height:1.8;max-width:300px;margin-bottom:28px;}
+    .lp-feats{list-style:none;display:flex;flex-direction:column;gap:10px;}
+    .lp-feats li{font-size:10px;letter-spacing:.1em;color:rgba(213,224,255,.34);display:flex;align-items:center;gap:10px;}
+    .lp-feats li span{color:rgba(213,224,255,.52);font-size:14px;line-height:1;width:18px;text-align:center;}
+    .lp-bot{}
+    .ph-box{border:1px solid rgba(213,224,255,.07);padding:14px 16px;border-radius:2px;background:rgba(213,224,255,.018);}
+    .ph-label{font-size:7.5px;letter-spacing:.28em;color:rgba(213,224,255,.22);margin-bottom:10px;}
+    .ph-row{display:flex;align-items:center;gap:8px;font-size:9.5px;letter-spacing:.08em;color:rgba(213,224,255,.5);}
+    .ph-dot{width:6px;height:6px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;animation:pdot 1.5s ease-in-out infinite;}
+    @keyframes pdot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.7)}}
+    .lp-copy{margin-top:18px;font-size:8px;letter-spacing:.18em;color:rgba(213,224,255,.12);}
+    .logo{position:fixed;top:26px;left:30px;display:flex;align-items:center;gap:10px;text-decoration:none;z-index:30;}
+    .lm{width:26px;height:26px;border:1px solid var(--bdr);display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;letter-spacing:.06em;}
+    .lt{font-size:9px;font-weight:700;letter-spacing:.28em;color:var(--dim);}
+    .ring-label{position:fixed;top:26px;right:28px;font-size:8px;letter-spacing:.22em;color:rgba(213,224,255,.18);z-index:30;pointer-events:none;}
+    .wrap{position:fixed;top:0;right:0;width:44%;height:100%;display:flex;align-items:center;justify-content:center;z-index:20;padding:24px 36px;overflow-y:auto;background:linear-gradient(to right,rgba(5,5,9,0) 0%,rgba(5,5,9,.88) 18%,rgba(5,5,9,.96) 100%);}.divider{position:fixed;left:56%;top:6%;bottom:6%;width:1px;background:linear-gradient(to bottom,transparent,rgba(213,224,255,.1) 20%,rgba(213,224,255,.1) 80%,transparent);z-index:10;pointer-events:none;}
+    .card{position:relative;width:100%;max-width:368px;background:rgba(5,5,9,.78);border:1px solid rgba(213,224,255,.12);border-radius:3px;padding:34px 32px 28px;backdrop-filter:blur(36px);-webkit-backdrop-filter:blur(36px);}
+    .card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(to right,transparent,rgba(213,224,255,.4) 40%,rgba(213,224,255,.4) 60%,transparent);}
+    .card::after{content:'';position:absolute;bottom:-1px;right:-1px;width:14px;height:14px;border-bottom:1px solid rgba(213,224,255,.4);border-right:1px solid rgba(213,224,255,.4);}
+    .card-tl{position:absolute;top:-1px;left:-1px;width:14px;height:14px;border-top:1px solid rgba(213,224,255,.4);border-left:1px solid rgba(213,224,255,.4);}
+    .status{display:flex;align-items:center;gap:7px;margin-bottom:20px;font-size:8px;letter-spacing:.25em;color:rgba(213,224,255,.28);}
+    .sdot{width:5px;height:5px;border-radius:50%;background:#4ade80;box-shadow:0 0 8px #4ade80;animation:sdot 2.4s ease-in-out infinite;}
+    @keyframes sdot{0%,100%{opacity:1}50%{opacity:.35}}
+    .ctitle{font-size:20px;font-weight:700;letter-spacing:-.02em;color:var(--acc);margin-bottom:3px;}
+    .csub{font-size:9px;letter-spacing:.12em;color:var(--mut);margin-bottom:26px;}
+    .fg{margin-bottom:13px;}
+    label{display:block;font-size:8px;letter-spacing:.26em;color:var(--mut);margin-bottom:6px;text-transform:uppercase;}
+    input{width:100%;background:var(--fnt);border:1px solid var(--bdr);border-radius:2px;padding:11px 13px;color:var(--acc);font-family:var(--mono);font-size:12.5px;outline:none;transition:border-color .18s,background .18s;}
+    input::placeholder{color:rgba(213,224,255,.14);}
+    input:focus{border-color:var(--fcs);background:rgba(213,224,255,.065);}
+    .sbars{display:flex;gap:4px;margin-top:8px;}
+    .sb{flex:1;height:2px;background:rgba(213,224,255,.08);border-radius:1px;transition:background .28s;}
+    .sb.s1{background:#ef4444;}.sb.s2{background:#f97316;}.sb.s3{background:#eab308;}.sb.s4{background:#4ade80;}
+    .slbl{font-size:8px;letter-spacing:.2em;color:var(--mut);margin-top:5px;min-height:13px;}
+    .err{font-size:9.5px;letter-spacing:.05em;padding:9px 12px;border-radius:2px;margin-bottom:12px;display:none;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#fca5a5;}
+    .err.show{display:block;}
+    .btn{width:100%;background:var(--acc);color:var(--bg);border:none;border-radius:2px;padding:13px;font-family:var(--mono);font-size:9.5px;font-weight:700;letter-spacing:.2em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:6px;transition:opacity .18s,transform .14s;}
+    .btn:hover:not(:disabled){opacity:.85;transform:translateY(-1px);}
+    .btn:disabled{opacity:.36;cursor:not-allowed;}
+    .spin{width:11px;height:11px;border:2px solid rgba(5,5,9,.22);border-top-color:var(--bg);border-radius:50%;animation:sp .6s linear infinite;}
+    @keyframes sp{to{transform:rotate(360deg)}}
+    .foot{display:flex;align-items:center;justify-content:center;margin-top:16px;font-size:9.5px;color:var(--mut);}
+    .foot a{color:var(--dim);text-decoration:none;transition:color .15s;}
+    .foot a:hover{color:var(--acc);}
+    .terms{margin-top:13px;font-size:8px;letter-spacing:.04em;color:rgba(213,224,255,.2);line-height:1.6;text-align:center;}
+    .card{animation:cardIn .8s cubic-bezier(.22,1,.36,1) .3s both;}
+    @keyframes cardIn{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
   </style>
 </head>
 <body>
-<div class="auth-shell">
+<canvas id="c"></canvas>
+<div id="sc"></div>
+<div id="vg"></div>
+<a class="logo" href="/landing.html"><div class="lm">FL</div><span class="lt">FLOWRA</span></a>
+<div class="divider"></div>
 
-  <!-- ── Left brand panel ── -->
-  <div class="brand-panel">
-    <div class="brand-logo">
-      <div class="brand-icon">
-        <svg viewBox="0 0 24 24" fill="none">
-          <path d="M12 2L22 7.5V16.5L12 22L2 16.5V7.5L12 2Z" stroke="#38bdf8" stroke-width="1.6" fill="rgba(56,189,248,0.08)"/>
-          <path d="M12 7L17 9.8v5.4L12 18l-5-2.8V9.8L12 7z" fill="rgba(56,189,248,0.15)" stroke="rgba(56,189,248,0.5)" stroke-width="1"/>
-        </svg>
-      </div>
-      <div class="brand-wordmark">System<span>Flow</span></div>
-    </div>
-
-    <h1 class="brand-headline">Build, simulate,<br><em>ship with confidence.</em></h1>
-    <p class="brand-sub">Model any distributed architecture and stress-test it before it ever hits production.</p>
-
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">01</div>
-        <div class="step-body">
-          <div class="step-title">Drag &amp; drop nodes</div>
-          <div class="step-desc">108 node types — databases, queues, AI, cloud services.</div>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">02</div>
-        <div class="step-body">
-          <div class="step-title">Wire the topology</div>
-          <div class="step-desc">Connect nodes visually. The advisor flags weaknesses instantly.</div>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">03</div>
-        <div class="step-body">
-          <div class="step-title">Simulate load</div>
-          <div class="step-desc">Fire up to 1M req/s. Watch latency, errors, and cascades live.</div>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">04</div>
-        <div class="step-body">
-          <div class="step-title">Fix before prod</div>
-          <div class="step-desc">12 test scenarios, chaos mode, AI advisor — ship with confidence.</div>
-        </div>
-      </div>
-    </div>
-
-    <div class="feature-chips">
-      <span class="chip chip-cyan">108 nodes</span>
-      <span class="chip chip-indigo">Chaos mode</span>
-      <span class="chip chip-green">Test Lab</span>
-      <span class="chip chip-cyan">AI Advisor</span>
-      <span class="chip chip-indigo">1M req/s</span>
-    </div>
-
-    <div class="version-tag">v2.0 — Free to start, no credit card</div>
+<!-- left info panel -->
+<div class="lp">
+  <div class="lp-top">
+    <div class="lp-ey">NETWORK GENESIS · LIVE</div>
+    <h1 class="lp-h1">Build systems<br>that don't<br>break.</h1>
+    <p class="lp-sub">Every node, every connection, every failure — simulated before it costs you a production incident.</p>
+    <ul class="lp-feats">
+      <li><span>⬡</span>108 node types across 19 categories</li>
+      <li><span>◈</span>12 chaos testing scenarios</li>
+      <li><span>✦</span>AI topology advisor — live analysis</li>
+      <li><span>⚡</span>Up to 1M req/sec simulation</li>
+    </ul>
   </div>
-
-  <!-- ── Right form panel ── -->
-  <div class="form-panel">
-    <div class="form-card">
-      <div class="form-title">Create your account</div>
-      <div class="form-sub">Free forever. Upgrade when you need more.</div>
-
-      <div id="error" class="error-msg"></div>
-
-      <div class="field">
-        <label for="name">Full name</label>
-        <input type="text" id="name" placeholder="Jane Smith" autocomplete="name"/>
-      </div>
-      <div class="field">
-        <label for="email">Email address</label>
-        <input type="email" id="email" placeholder="you@example.com" autocomplete="email"/>
-      </div>
-      <div class="field-row">
-        <div class="field" style="margin-bottom:0">
-          <label for="password">Password</label>
-          <input type="password" id="password" placeholder="min 6 chars" autocomplete="new-password" oninput="updateStrength()"/>
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <label for="confirm">Confirm</label>
-          <input type="password" id="confirm" placeholder="repeat" autocomplete="new-password"/>
-        </div>
-      </div>
-      <div class="pw-strength" id="strength-row" style="margin-bottom:16px;display:none">
-        <div class="pw-bar" id="bar1"></div>
-        <div class="pw-bar" id="bar2"></div>
-        <div class="pw-bar" id="bar3"></div>
-        <div class="pw-bar" id="bar4"></div>
-        <div class="pw-label" id="strength-label"></div>
-      </div>
-
-      <div id="error2" class="error-msg"></div>
-
-      <button class="btn-submit" id="submit-btn" onclick="handleRegister()">
-        Create account
-      </button>
-
-      <div class="terms">
-        By creating an account you agree to our <a href="#">Terms</a> and <a href="#">Privacy Policy</a>.
-      </div>
-
-      <div class="form-footer" style="margin-top:18px">
-        Already have an account? <a href="/login.html">Sign in</a>
-      </div>
+  <div class="lp-bot">
+    <div class="ph-box">
+      <div class="ph-label">SIMULATION STATUS</div>
+      <div class="ph-row"><div class="ph-dot"></div><span id="phase-label">ASSEMBLING TOPOLOGY</span></div>
     </div>
+    <div class="lp-copy">© FLOWRA, INC. 2025</div>
   </div>
-
 </div>
 
+<div class="wrap">
+  <div class="card">
+    <div class="card-tl"></div>
+    <div class="status"><div class="sdot"></div>SYSTEM ONLINE</div>
+    <div class="ctitle">Create account</div>
+    <div class="csub">JOIN THE FLOWRA PLATFORM</div>
+    <div class="fg"><label>Full name</label><input type="text" id="name" placeholder="Your Name" autocomplete="name"/></div>
+    <div class="fg"><label>Email address</label><input type="email" id="email" placeholder="you@example.com" autocomplete="email"/></div>
+    <div class="fg">
+      <label>Password</label>
+      <input type="password" id="password" placeholder="Min. 8 characters" autocomplete="new-password" oninput="chkStr()"/>
+      <div class="sbars"><div class="sb" id="s1"></div><div class="sb" id="s2"></div><div class="sb" id="s3"></div><div class="sb" id="s4"></div></div>
+      <div class="slbl" id="slbl"></div>
+    </div>
+    <div class="fg"><label>Confirm password</label><input type="password" id="confirm" placeholder="••••••••" autocomplete="new-password"/></div>
+    <div class="err" id="err"></div>
+    <button class="btn" id="sbtn" onclick="doRegister()">CREATE ACCOUNT</button>
+    <div class="foot"><a href="/login.html">← Already have an account</a></div>
+    <div class="terms">By creating an account you agree to our terms of service.</div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script>
-  // Redirect if already logged in
-  if (localStorage.getItem('sf_current_user')) {
-    window.location.href = '/SystemFlow.html';
+(function(){
+  var canvas=document.getElementById('c');
+  var W=function(){return window.innerWidth;},H=function(){return window.innerHeight;};
+  var phaseEl=document.getElementById('phase-label');
+
+  var renderer=new THREE.WebGLRenderer({canvas:canvas,alpha:false,antialias:true});
+  renderer.setSize(W(),H());renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0x050509,1);
+  if(THREE.SRGBColorSpace)renderer.outputColorSpace=THREE.SRGBColorSpace;
+
+  var scene=new THREE.Scene();
+  var camera=new THREE.PerspectiveCamera(52,W()/H(),0.1,200);
+  camera.position.set(0,0,18);
+
+  var group=new THREE.Group();group.position.x=-7;scene.add(group);
+
+  scene.add(new THREE.AmbientLight(0x0a0a1e,1.4));
+  var kl=new THREE.PointLight(0xD5E0FF,7,65);kl.position.set(-3,4,12);scene.add(kl);
+  var gl2=new THREE.PointLight(0x22dd88,3,40);gl2.position.set(8,-3,6);scene.add(gl2);
+
+  function mkGlow(sz){
+    var cv=document.createElement('canvas');cv.width=cv.height=sz;
+    var ctx=cv.getContext('2d');
+    var g=ctx.createRadialGradient(sz/2,sz/2,0,sz/2,sz/2,sz/2);
+    g.addColorStop(0,'rgba(213,224,255,1)');g.addColorStop(0.18,'rgba(213,224,255,0.6)');
+    g.addColorStop(0.55,'rgba(180,200,255,0.1)');g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g;ctx.fillRect(0,0,sz,sz);return new THREE.CanvasTexture(cv);
   }
-
-  function showError(msg) {
-    const el = document.getElementById('error');
-    el.textContent = msg;
-    el.classList.add('show');
-    document.getElementById('error2').classList.remove('show');
+  function mkGlowG(sz){
+    var cv=document.createElement('canvas');cv.width=cv.height=sz;
+    var ctx=cv.getContext('2d');
+    var g=ctx.createRadialGradient(sz/2,sz/2,0,sz/2,sz/2,sz/2);
+    g.addColorStop(0,'rgba(74,222,128,1)');g.addColorStop(0.25,'rgba(74,222,128,0.4)');g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g;ctx.fillRect(0,0,sz,sz);return new THREE.CanvasTexture(cv);
   }
-  function hideError() {
-    document.getElementById('error').classList.remove('show');
-    document.getElementById('error2').classList.remove('show');
-  }
-  function setLoading(on) {
-    const btn = document.getElementById('submit-btn');
-    btn.disabled = on;
-    btn.innerHTML = on
-      ? '<div class="spinner"></div> Creating account…'
-      : 'Create account';
-  }
+  var GT=mkGlow(128),GTG=mkGlowG(128);
 
-  function updateStrength() {
-    const pw = document.getElementById('password').value;
-    const row = document.getElementById('strength-row');
-    if (!pw) { row.style.display = 'none'; return; }
-    row.style.display = 'flex';
-    let score = 0;
-    if (pw.length >= 8) score++;
-    if (pw.length >= 12) score++;
-    if (/[A-Z]/.test(pw) && /[0-9]/.test(pw)) score++;
-    if (/[^A-Za-z0-9]/.test(pw)) score++;
-    const colors = ['#ef4444', '#f59e0b', '#38bdf8', '#22c55e'];
-    const labels = ['Weak', 'Fair', 'Good', 'Strong'];
-    for (let i = 1; i <= 4; i++) {
-      const bar = document.getElementById('bar' + i);
-      bar.style.background = i <= score ? colors[score - 1] : 'var(--border2)';
-    }
-    document.getElementById('strength-label').textContent = labels[score - 1] || '';
-    document.getElementById('strength-label').style.color = score > 0 ? colors[score - 1] : 'var(--text-muted)';
-  }
+  /* starfield */
+  var n=1800,sp=new Float32Array(n*3);
+  for(var i=0;i<n;i++){sp[i*3]=(Math.random()-.5)*180;sp[i*3+1]=(Math.random()-.5)*130;sp[i*3+2]=(Math.random()-.5)*100-20;}
+  var sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.BufferAttribute(sp,3));
+  scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0xD5E0FF,size:0.05,transparent:true,opacity:0.2,sizeAttenuation:true,depthWrite:false})));
 
-  async function handleRegister() {
-    hideError();
-    const name = document.getElementById('name').value.trim();
-    const email = document.getElementById('email').value.trim().toLowerCase();
-    const password = document.getElementById('password').value;
-    const confirm = document.getElementById('confirm').value;
+  var NODES=[
+    {pos:[-6.5,2.8,0.5],r:0.13},{pos:[-6.5,-2.8,-0.5],r:0.13},
+    {pos:[-3.5,0,0],r:0.24},{pos:[-0.5,2.8,1.0],r:0.17},
+    {pos:[-0.5,-2.8,0.5],r:0.17},{pos:[-0.5,0,-1.5],r:0.15},
+    {pos:[2.5,0.8,0.5],r:0.15},{pos:[5.0,-0.5,-0.5],r:0.19},
+    {pos:[5.0,2.5,1.0],r:0.14},{pos:[2.5,-2.5,0.0],r:0.13}
+  ];
+  var EDGES=[[0,2],[1,2],[2,3],[2,4],[2,5],[3,6],[4,6],[3,5],[6,7],[6,8],[7,9],[4,9]];
 
-    if (!name) { showError('Enter your full name.'); return; }
-    if (!email || !email.includes('@')) { showError('Enter a valid email address.'); return; }
-    if (!password || password.length < 8) { showError('Password must be at least 8 characters.'); return; }
-    if (password !== confirm) { showError('Passwords do not match.'); return; }
-
-    setLoading(true);
-
-    // Try backend API first
-    try {
-      const resp = await fetch('http://localhost:4000/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, name }),
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        const u = data.user;
-        const initials = name.split(' ').map(s => s[0]).slice(0, 2).join('').toUpperCase();
-        localStorage.setItem('sf_token', data.token);
-        localStorage.setItem('sf_current_user', JSON.stringify({
-          id: u.id, email: u.email, name: u.name, initials, avatar: null,
-        }));
-        setLoading(false);
-        const errEl = document.getElementById('error');
-        errEl.style.background = 'rgba(34,197,94,0.13)';
-        errEl.style.borderColor = 'rgba(34,197,94,0.3)';
-        errEl.style.color = '#22c55e';
-        errEl.textContent = 'Account created! Check server console for email verification link.';
-        errEl.classList.add('show');
-        setTimeout(() => { window.location.href = '/SystemFlow.html'; }, 2000);
-        return;
-      }
-      if (resp.status === 409) {
-        setLoading(false);
-        showError('An account with that email already exists.');
-        return;
-      }
-      if (resp.status === 400) {
-        const data = await resp.json().catch(() => ({}));
-        setLoading(false);
-        showError(data.error || 'Registration failed. Check your details.');
-        return;
-      }
-    } catch (_) { /* backend unavailable — fall through to localStorage */ }
-
-    // Fallback: localStorage registration (demo mode)
-    const users = JSON.parse(localStorage.getItem('sf_users') || '[]');
-    if (users.find(u => u.email === email)) { setLoading(false); showError('Account already exists.'); return; }
-    const initials = name.split(' ').map(s => s[0]).slice(0, 2).join('').toUpperCase();
-    users.push({ email, name, password, initials, avatar: null, createdAt: Date.now() });
-    localStorage.setItem('sf_users', JSON.stringify(users));
-    localStorage.setItem('sf_current_user', JSON.stringify({ email, name, initials, avatar: null }));
-    window.location.href = '/SystemFlow.html';
-  }
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') handleRegister();
+  var nData=NODES.map(function(nd){
+    var mesh=new THREE.Mesh(new THREE.IcosahedronGeometry(nd.r,1),new THREE.MeshStandardMaterial({color:0xD5E0FF,emissive:0x6688cc,emissiveIntensity:0.7,metalness:0.2,roughness:0.5,transparent:true,opacity:0}));
+    mesh.position.set(nd.pos[0],nd.pos[1],nd.pos[2]);group.add(mesh);
+    var gm=new THREE.SpriteMaterial({map:GT,color:0xD5E0FF,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false});
+    var gw=new THREE.Sprite(gm);gw.scale.setScalar(nd.r*7);gw.position.set(nd.pos[0],nd.pos[1],nd.pos[2]);group.add(gw);
+    var bm=new THREE.SpriteMaterial({map:GTG,color:0x4ade80,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false});
+    var bf=new THREE.Sprite(bm);bf.scale.setScalar(nd.r*14);bf.position.set(nd.pos[0],nd.pos[1],nd.pos[2]);group.add(bf);
+    return{mesh:mesh,gm:gm,gw:gw,bm:bm,bf:bf,np:2+Math.random()*4,born:false};
   });
+
+  var edgeProg=EDGES.map(function(){return 0;});
+  var eVerts=new Float32Array(EDGES.length*6);
+  var eGeo=new THREE.BufferGeometry();eGeo.setAttribute('position',new THREE.BufferAttribute(eVerts,3));
+  var eLines=new THREE.LineSegments(eGeo,new THREE.LineBasicMaterial({color:0xD5E0FF,transparent:true,opacity:0,depthWrite:false}));
+  group.add(eLines);
+
+  var pkts=[];
+  for(var pi=0;pi<22;pi++){
+    var psm=new THREE.SpriteMaterial({map:GT,color:0xffffff,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false});
+    var psp=new THREE.Sprite(psm);psp.scale.setScalar(0.15);group.add(psp);
+    pkts.push({sp:psp,edge:pi%EDGES.length,t:Math.random(),spd:0.003+Math.random()*0.006});
+  }
+
+  var rings=[],rGeo=new THREE.RingGeometry(0.08,0.18,22);
+  function spawnRing(idx){
+    if(rings.length>=16)return;
+    var p=NODES[idx].pos;
+    var mat=new THREE.MeshBasicMaterial({color:0xD5E0FF,transparent:true,opacity:0.55,side:THREE.DoubleSide,depthWrite:false});
+    var m=new THREE.Mesh(rGeo,mat);
+    m.position.set(p[0],p[1],p[2]);m.rotation.x=Math.random()*Math.PI;m.rotation.z=Math.random()*Math.PI;
+    group.add(m);rings.push({m:m,mat:mat,s:1});
+  }
+
+  /* genesis particles */
+  var PPG=20;
+  var pVerts=new Float32Array(NODES.length*PPG*3);
+  var pGeo=new THREE.BufferGeometry();pGeo.setAttribute('position',new THREE.BufferAttribute(pVerts,3));
+  var pMesh=new THREE.Points(pGeo,new THREE.PointsMaterial({color:0xD5E0FF,size:0.1,transparent:true,opacity:0.7,sizeAttenuation:true,depthWrite:false}));
+  group.add(pMesh);
+
+  var pStart=[],pEnd=[];
+  NODES.forEach(function(nd,ni){
+    for(var i=0;i<PPG;i++){
+      var r=14+Math.random()*7,th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);
+      pStart.push(r*Math.sin(ph)*Math.cos(th),r*Math.sin(ph)*Math.sin(th),r*Math.cos(ph));
+      pEnd.push(nd.pos[0]+(Math.random()-.5)*.4,nd.pos[1]+(Math.random()-.5)*.4,nd.pos[2]+(Math.random()-.5)*.4);
+    }
+  });
+  for(var ii=0;ii<pStart.length;ii++)pVerts[ii]=pStart[ii];
+  pGeo.attributes.position.needsUpdate=true;
+
+  var STATE={GATHER:0,CRYSTAL:1,RUN:2,SCATTER:3};
+  var state=STATE.GATHER,stateT=0;
+
+  function updateEdgeGeo(){
+    EDGES.forEach(function(e,i){
+      var a=NODES[e[0]].pos,b=NODES[e[1]].pos,p=edgeProg[i];
+      eVerts[i*6]=a[0];eVerts[i*6+1]=a[1];eVerts[i*6+2]=a[2];
+      eVerts[i*6+3]=a[0]+(b[0]-a[0])*p;eVerts[i*6+4]=a[1]+(b[1]-a[1])*p;eVerts[i*6+5]=a[2]+(b[2]-a[2])*p;
+    });
+    eGeo.attributes.position.needsUpdate=true;
+  }
+
+  var mou={tx:0,ty:0,x:0,y:0};
+  window.addEventListener('mousemove',function(e){mou.tx=(e.clientX/W()-.5)*4;mou.ty=-(e.clientY/H()-.5)*2.5;});
+
+  var t0=performance.now(),prev=t0;
+
+  function tick(){
+    requestAnimationFrame(tick);
+    var now=performance.now();
+    var t=(now-t0)/1000,dt=Math.min((now-prev)/1000,0.05);
+    prev=now;stateT+=dt;
+
+    mou.x+=(mou.tx-mou.x)*0.035;mou.y+=(mou.ty-mou.y)*0.035;
+    camera.position.x+=(mou.x*0.3-camera.position.x)*0.025;
+    camera.position.y+=(mou.y*0.25-camera.position.y)*0.025;
+    camera.lookAt(0,0,0);
+
+    if(state===STATE.GATHER){
+      var prog=Math.min(1,stateT/3.5),ease=1-Math.pow(1-prog,3);
+      for(var i=0;i<pStart.length/3;i++){
+        pVerts[i*3]=pStart[i*3]+(pEnd[i*3]-pStart[i*3])*ease;
+        pVerts[i*3+1]=pStart[i*3+1]+(pEnd[i*3+1]-pStart[i*3+1])*ease;
+        pVerts[i*3+2]=pStart[i*3+2]+(pEnd[i*3+2]-pStart[i*3+2])*ease;
+      }
+      pGeo.attributes.position.needsUpdate=true;
+      group.rotation.y=t*0.04;
+      if(prog>=1){state=STATE.CRYSTAL;stateT=0;phaseEl.textContent='CRYSTALLIZING NODES';}
+    }
+    else if(state===STATE.CRYSTAL){
+      group.rotation.y=t*0.04;
+      nData.forEach(function(nd,i){
+        var t2=Math.max(0,stateT-i*0.15),fi=Math.min(1,t2/0.35);
+        nd.mesh.material.opacity=fi;nd.gm.opacity=fi*0.5;
+        if(!nd.born&&fi>0.05){nd.born=true;spawnRing(i);}
+        nd.bm.opacity=Math.max(0,(1-stateT*1.5+i*0.12)*0.8);
+      });
+      EDGES.forEach(function(e,i){var t2=Math.max(0,stateT-0.8-i*0.07);edgeProg[i]=Math.min(1,t2/0.5);});
+      if(EDGES.some(function(_,i){return edgeProg[i]>0;})){eLines.material.opacity=0.15;updateEdgeGeo();}
+      pMesh.material.opacity=Math.max(0,0.7-stateT*1.8);
+      if(stateT>2.5){state=STATE.RUN;stateT=0;phaseEl.textContent='SYSTEM ONLINE';pMesh.material.opacity=0;}
+    }
+    else if(state===STATE.RUN){
+      group.rotation.y=t*0.06;group.rotation.x=Math.sin(t*0.18)*0.038;
+      nData.forEach(function(nd,i){
+        nd.gm.opacity=0.35+Math.sin(t*1.6+i*1.1)*0.18;
+        nd.mesh.material.emissiveIntensity=0.5+Math.sin(t*1.1+i*0.9)*0.22;
+        nd.np-=dt;if(nd.np<=0){spawnRing(i);nd.np=2.5+Math.random()*3.5;}
+      });
+      for(var ri=rings.length-1;ri>=0;ri--){
+        var r=rings[ri];r.s+=dt*2.2;r.mat.opacity-=dt*0.58;r.m.scale.setScalar(r.s);
+        if(r.mat.opacity<=0){group.remove(r.m);r.mat.dispose();rings.splice(ri,1);}
+      }
+      pkts.forEach(function(p){
+        p.sp.material.opacity=Math.min(0.85,p.sp.material.opacity+dt*2);
+        p.t+=p.spd;if(p.t>=1){p.t=0;p.edge=Math.floor(Math.random()*EDGES.length);}
+        var e=EDGES[p.edge],a=NODES[e[0]].pos,b=NODES[e[1]].pos;
+        p.sp.position.set(a[0]+(b[0]-a[0])*p.t,a[1]+(b[1]-a[1])*p.t,a[2]+(b[2]-a[2])*p.t);
+      });
+      if(stateT>18){
+        state=STATE.SCATTER;stateT=0;phaseEl.textContent='REBUILDING TOPOLOGY';
+        pkts.forEach(function(p){p.sp.material.opacity=0;});
+      }
+    }
+    else if(state===STATE.SCATTER){
+      group.rotation.y=t*0.06;
+      var fo=Math.min(1,stateT/0.8);
+      nData.forEach(function(nd){nd.mesh.material.opacity=Math.max(0,1-fo);nd.gm.opacity=Math.max(0,.5-fo*.5);});
+      eLines.material.opacity=Math.max(0,0.15-fo*0.15);
+      pMesh.material.opacity=Math.min(0.7,fo*0.7);
+      var sc=Math.min(1,stateT/1.2),sce=1-Math.pow(1-sc,2);
+      for(var si=0;si<pStart.length/3;si++){
+        pVerts[si*3]=pEnd[si*3]+(pStart[si*3]-pEnd[si*3])*sce;
+        pVerts[si*3+1]=pEnd[si*3+1]+(pStart[si*3+1]-pEnd[si*3+1])*sce;
+        pVerts[si*3+2]=pEnd[si*3+2]+(pStart[si*3+2]-pEnd[si*3+2])*sce;
+      }
+      pGeo.attributes.position.needsUpdate=true;
+      if(stateT>1.5){
+        rings.forEach(function(r){group.remove(r.m);r.mat.dispose();});rings.length=0;
+        edgeProg.fill(0);updateEdgeGeo();eLines.material.opacity=0;
+        nData.forEach(function(nd){nd.mesh.material.opacity=0;nd.gm.opacity=0;nd.born=false;});
+        state=STATE.GATHER;stateT=0;phaseEl.textContent='ASSEMBLING TOPOLOGY';
+      }
+    }
+
+    renderer.render(scene,camera);
+  }
+  tick();
+  window.addEventListener('resize',function(){camera.aspect=W()/H();camera.updateProjectionMatrix();renderer.setSize(W(),H());});
+}());
+
+function chkStr(){
+  var pw=document.getElementById('password').value;
+  var c=[pw.length>=8,/[A-Z]/.test(pw),/[0-9]/.test(pw),/[^A-Za-z0-9]/.test(pw)];
+  var s=c.filter(Boolean).length;
+  ['s1','s2','s3','s4'].forEach(function(id,i){document.getElementById(id).className='sb'+(s>i?' s'+s:'');});
+  document.getElementById('slbl').textContent=['','WEAK','FAIR','GOOD','STRONG'][s]||'';
+}
+function showErr(m){var e=document.getElementById('err');e.textContent=m;e.classList.add('show');}
+function hideErr(){document.getElementById('err').classList.remove('show');}
+function setLoad(on){var b=document.getElementById('sbtn');b.disabled=on;b.innerHTML=on?'<div class="spin"></div>CREATING ACCOUNT':'CREATE ACCOUNT';}
+
+async function doRegister(){
+  hideErr();
+  var name=document.getElementById('name').value.trim();
+  var email=document.getElementById('email').value.trim().toLowerCase();
+  var password=document.getElementById('password').value;
+  var confirm=document.getElementById('confirm').value;
+  if(!name){showErr('Enter your full name.');return;}
+  if(!email){showErr('Enter your email address.');return;}
+  if(password.length<8){showErr('Password must be at least 8 characters.');return;}
+  if(password!==confirm){showErr('Passwords do not match.');return;}
+  setLoad(true);
+  try{
+    var r=await fetch('http://localhost:4000/api/auth/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,password})});
+    if(r.ok){
+      var d=await r.json();
+      var initials=name.split(' ').map(function(s){return s[0];}).slice(0,2).join('').toUpperCase();
+      if(d.token)localStorage.setItem('sf_token',d.token);
+      localStorage.setItem('sf_current_user',JSON.stringify({id:d.user&&d.user.id,email,name,initials,avatar:null}));
+      window.location.href='/SystemFlow.html';return;
+    }
+    var d2=await r.json().catch(function(){return{};});
+    setLoad(false);showErr(d2.error||'Registration failed.');
+  }catch(_){
+    var users=JSON.parse(localStorage.getItem('sf_users')||'[]');
+    if(users.find(function(u){return u.email===email;})){setLoad(false);showErr('Account already exists.');return;}
+    var ini=name.split(' ').map(function(s){return s[0];}).slice(0,2).join('').toUpperCase();
+    users.push({email,name,password,initials:ini,avatar:null});
+    localStorage.setItem('sf_users',JSON.stringify(users));
+    localStorage.setItem('sf_current_user',JSON.stringify({email,name,initials:ini,avatar:null}));
+    window.location.href='/SystemFlow.html';
+  }
+}
+document.addEventListener('keydown',function(e){if(e.key==='Enter')doRegister();});
 </script>
 </body>
 </html>
