@@ -222,7 +222,7 @@ endTag.textContent='TEST · BREAK · REBUILD';
 /* CTA */
 var endCta=document.createElement('a');
 endCta.href='/register.html';
-endCta.style.cssText='margin-top:44px;font:700 10px/1 monospace;letter-spacing:0.22em;color:#050509;background:#D5E0FF;padding:13px 30px;text-decoration:none;border-radius:2px;opacity:0;transition:opacity 0.8s ease 1.6s,transform 0.2s;pointer-events:auto;display:inline-block;';
+endCta.style.cssText='margin-top:44px;font:700 10px/1 monospace;letter-spacing:0.22em;color:#050509;background:#D5E0FF;padding:13px 30px;text-decoration:none;border-radius:2px;opacity:0;transition:opacity 0.8s ease,transform 0.2s;pointer-events:none;display:inline-block;';
 endCta.textContent='GET STARTED →';
 endCta.addEventListener('mouseover',function(){endCta.style.opacity='0.84';endCta.style.transform='translateY(-2px)';});
 endCta.addEventListener('mouseout',function(){endCta.style.opacity='1';endCta.style.transform='';});
@@ -250,7 +250,7 @@ function showEnd(){
   setTimeout(function(){endLine.style.width='120px';},400);
   /* tagline + CTA fade in via CSS transitions triggered by opacity */
   setTimeout(function(){endTag.style.opacity='1';},1200);
-  setTimeout(function(){endCta.style.opacity='1';},1600);
+  setTimeout(function(){endCta.style.opacity='1';endCta.style.pointerEvents='auto';},1600);
 }
 function hideEnd(){
   if(!endShown)return;endShown=false;
@@ -264,9 +264,8 @@ function hideEnd(){
   },600);
 }
 
-var tw=null;var shown=-1;var _typingDone=true;
+var tw=null;var shown=-1;
 function type(txt){
-  _typingDone=false;
   if(tw)clearTimeout(tw);
   bodyEl.textContent='';bodyEl.appendChild(curEl);curEl.style.opacity='1';
   var i=0;
@@ -278,81 +277,86 @@ function type(txt){
       tw=setTimeout(tick,30);
     } else {
       setTimeout(function(){curEl.style.opacity='0';},900);
-      _typingDone=true;
     }
   })();
 }
 function show(idx){
   if(idx===shown)return;shown=idx;
   var d=ITEMS[idx];if(!d)return;
-  /* last slide → logo immediately; all others → hide logo */
+  /* logo shows on last slide, hides on all others */
   if(idx===ITEMS.length-1){showEnd();}else{hideEnd();}
   curEl.style.opacity='1';
   titleEl.textContent=d.label;
   ov2.style.opacity='1';
   type(d.info);
-  document.querySelectorAll('[data-fl]').forEach(function(el){
-    el.style.opacity=el.getAttribute('data-fl')===''+idx?'1':'0.45';
+}
+
+/* ── Auto-cycle: text changes every 5s automatically ── */
+var _autoIdx=0,_autoIv=null;
+function _restartAuto(){
+  if(_autoIv)clearInterval(_autoIv);
+  _autoIv=setInterval(function(){
+    _autoIdx=(_autoIdx+1)%ITEMS.length;
+    shown=-1;
+    show(_autoIdx);
+  },5000);
+}
+setTimeout(function(){show(0);_restartAuto();},1800);
+
+/* manual jump (scroll/click) — resets auto-cycle from new position */
+function showAt(idx){
+  _autoIdx=idx;
+  shown=-1;
+  show(idx);
+  _restartAuto();
+}
+
+/* ── Wheel: real user scroll only (isTrusted blocks synthetic auto-scroll events) ── */
+var _wD=0,_wT=null,_wLock=false;
+window.addEventListener('wheel',function(e){
+  if(!e.isTrusted)return; /* ignore synthetic wheel events from auto-scroll */
+  _wD=e.deltaY;
+  if(_wLock)return;
+  clearTimeout(_wT);
+  _wT=setTimeout(function(){
+    var dir=_wD>0?1:-1;
+    _wLock=true;
+    setTimeout(function(){_wLock=false;},1500);
+    var next=Math.max(0,Math.min(ITEMS.length-1,(_autoIdx)+(dir)));
+    showAt(next);
+  },220);
+},{passive:true,capture:true});
+
+/* ── Auto-scroll: slowly drives Hubtown's 3D animation forward ── */
+(function(){
+  var paused=false,resumeT=null,scrollIv=null;
+  function pause(){
+    paused=true;
+    clearTimeout(resumeT);
+    resumeT=setTimeout(function(){paused=false;},4000); /* resume 4s after user stops */
+  }
+  /* pause on any real user interaction */
+  ['mousedown','touchstart','keydown'].forEach(function(ev){
+    window.addEventListener(ev,pause,{passive:true});
   });
-}
+  /* dispatch tiny wheel events — Hubtown's listener picks these up; ours ignores them */
+  scrollIv=setInterval(function(){
+    if(paused)return;
+    window.dispatchEvent(new WheelEvent('wheel',{
+      deltaY:5,deltaMode:0,bubbles:true,cancelable:false
+    }));
+  },55); /* ~90 units/sec — slow cinematic scroll */
+})();
 
-function getActiveSection(){
-  var vh=window.innerHeight;var best=0;
-  for(var i=0;i<6;i++){
-    var el=document.getElementById('home-section-'+i);
-    if(!el)continue;
-    if(el.getBoundingClientRect().top<=vh*0.55)best=i;
-  }
-  return best;
-}
-/* ── Wheel / touchpad: gated on typing completion ── */
-/* ── Wheel: accumulate deltaY, fire at threshold, lock during inertia ── */
-var _wLock=false,_wAccum=0;
-function _advance(delta,force){
-  if(_wLock&&!force)return;
-  if(!force){
-    _wAccum+=delta;
-    if(Math.abs(_wAccum)<80)return; /* build up until deliberate scroll */
-    _wAccum=0;
-  }
-  _wLock=true;
-  /* lock + reset accumulator so inertia events after advance are ignored */
-  setTimeout(function(){_wLock=false;_wAccum=0;},1400);
-  var cur=shown<0?-1:shown;
-  var next=Math.max(0,Math.min(ITEMS.length-1,cur+(delta>0?1:-1)));
-  if(next===shown)return;
-  show(next);
-}
-window.addEventListener('wheel',function(e){_advance(e.deltaY);},{passive:true});
-
-/* touch swipe */
-var _ty0=0;
-window.addEventListener('touchstart',function(e){_ty0=e.touches[0].clientY;},{passive:true});
-window.addEventListener('touchend',function(e){
-  var dy=_ty0-e.changedTouches[0].clientY;
-  if(Math.abs(dy)<30)return;
-  _advance(dy,true); /* touch swipes always fire (already deliberate) */
-},{passive:true});
-/* scroll event removed — it used getActiveSection() which misfired logo via Hubtown internal scroll */
-
+/* ── Click nav items ── */
 document.addEventListener('click',function(e){
+  if(!e.isTrusted)return;
   var nav=document.querySelector('[class*="gap-y-4"][class*="fixed"]');
   if(!nav)return;
   var btns=Array.from(nav.querySelectorAll('[class*="cursor-pointer"]'));
   var idx=btns.findIndex(function(b){return b===e.target||b.contains(e.target);});
-  if(idx>=0&&idx<ITEMS.length)show(idx);
+  if(idx>=0&&idx<ITEMS.length)showAt(idx);
 },true);
-
-var wt=setInterval(function(){
-  var nav=document.querySelector('[class*="gap-y-4"][class*="fixed"]');
-  if(!nav)return;
-  nav.querySelectorAll('[class*="cursor-pointer"]').forEach(function(b,i){
-    if(i>=ITEMS.length||b._flW)return;b._flW=true;b.setAttribute('data-fl',''+i);
-  });
-},400);
-setTimeout(function(){clearInterval(wt);},10000);
-
-setTimeout(function(){show(0);},1800);
 
 function removeUI(){
   document.querySelectorAll('button').forEach(function(b){
